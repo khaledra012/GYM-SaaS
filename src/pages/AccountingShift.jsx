@@ -1,0 +1,226 @@
+import React, { useState, useEffect } from 'react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, LogIn, LogOut, Activity } from 'lucide-react';
+import DashboardLayout from '../components/DashboardLayout';
+import Input from '../components/Input';
+import Button from '../components/Button';
+import { accountingAPI } from '../utils/api';
+
+const AccountingShift = () => {
+    const [summaryData, setSummaryData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Form states
+    const [startingCash, setStartingCash] = useState('');
+    const [actualEndingCash, setActualEndingCash] = useState('');
+
+    const fetchSummary = async () => {
+        setIsLoading(true);
+        try {
+            const res = await accountingAPI.getDashboardSummary();
+            // The API wrapper usually returns the `data` payload if it follows standard formatting
+            // Depending on how `handleResponse` is written, it might return { status, data: { ... } } or just the inner data.
+            const dataToSet = res.data || res;
+            setSummaryData(dataToSet);
+        } catch (error) {
+            console.error('Failed to fetch accounting summary:', error);
+            // Don't show an alert here necessarily, just show empty state
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSummary();
+    }, []);
+
+    const handleOpenShift = async (e) => {
+        e.preventDefault();
+        if (!startingCash || Number(startingCash) < 0) {
+            alert('الرجاء إدخال مبلغ صحيح للعهدة الافتتاحية');
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await accountingAPI.openShift(startingCash);
+            setStartingCash('');
+            fetchSummary();
+        } catch (error) {
+            alert(error.message || 'فشل فتح الوردية');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleCloseShift = async (e) => {
+        e.preventDefault();
+        if (!actualEndingCash || Number(actualEndingCash) < 0) {
+            alert('الرجاء إدخال عهدة الإغلاق الفعلية');
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await accountingAPI.closeShift(actualEndingCash);
+            setActualEndingCash('');
+            fetchSummary();
+        } catch (error) {
+            alert(error.message || 'فشل إغلاق الوردية');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Helper functions for formatting
+    const parseDecimal = (val) => {
+        if (val === null || val === undefined) return '0.00';
+        return Number(val).toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    return (
+        <DashboardLayout>
+            <div className="flex-between page-header mb-8">
+                <header>
+                    <h1 className="page-title">الملخص والوردية</h1>
+                    <p className="page-subtitle">إدارة عهدة الخزنة، فتح وإغلاق الورديات، وملخص اليوم المالي.</p>
+                </header>
+                {/* Status Badge here */}
+                {summaryData && (
+                    <div className={`status-badge ${summaryData.hasOpenShift ? 'active' : 'inactive'}`} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                        {summaryData.hasOpenShift ? 'يوجد وردية مفتوحة' : 'لا يوجد وردية حالياً'}
+                    </div>
+                )}
+            </div>
+
+            {isLoading ? (
+                <div className="glass-panel"><p>جاري التحميل...</p></div>
+            ) : (
+                <>
+                    {/* Financial Summary Cards */}
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#39ff14', background: 'rgba(57, 255, 20, 0.1)' }}>
+                                <TrendingUp size={24} />
+                            </div>
+                            <h3 className="stat-label">إجمالي الدخل (Income)</h3>
+                            <p className="stat-value">{parseDecimal(summaryData?.income)} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span></p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#ff3e3e', background: 'rgba(255, 62, 62, 0.1)' }}>
+                                <TrendingDown size={24} />
+                            </div>
+                            <h3 className="stat-label">المصروفات (Expenses)</h3>
+                            <p className="stat-value" style={{ color: '#fca5a5' }}>{parseDecimal(summaryData?.expenses)} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span></p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)' }}>
+                                <Activity size={24} />
+                            </div>
+                            <h3 className="stat-label">الصافي (Net Profit)</h3>
+                            <p className="stat-value" style={{ color: summaryData?.netProfit && Number(summaryData.netProfit) < 0 ? '#fca5a5' : '#38bdf8' }}>
+                                {parseDecimal(summaryData?.netProfit)} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span>
+                            </p>
+                        </div>
+                        <div className="stat-card" style={{ border: summaryData?.hasOpenShift ? '1px solid var(--accent-neon)' : '' }}>
+                            <div className="stat-icon-wrapper" style={{ color: '#eab308', background: 'rgba(234, 179, 8, 0.1)' }}>
+                                <Wallet size={24} />
+                            </div>
+                            <h3 className="stat-label">الدرج الحالي (Drawer Cash)</h3>
+                            <p className="stat-value">
+                                {summaryData?.currentDrawerCash !== null ? parseDecimal(summaryData?.currentDrawerCash) : '—'} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Shift Management Section */}
+                    <div className="glass-panel mt-6">
+                        <h2 className="section-title mb-6" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <DollarSign size={20} className="text-neon" /> إدارة الوردية
+                        </h2>
+
+                        {summaryData?.hasOpenShift ? (
+                            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(57, 255, 20, 0.2)' }}>
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-main)' }}>وردية حالية معلقة</h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                        <div className="detail-card">
+                                            <p className="detail-label">وقت الفتح</p>
+                                            <p className="detail-value">{new Date(summaryData.currentShift.openedAt).toLocaleTimeString()}</p>
+                                        </div>
+                                        <div className="detail-card">
+                                            <p className="detail-label">عهدة البداية</p>
+                                            <p className="detail-value">{parseDecimal(summaryData.currentShift.startingCash)} EGP</p>
+                                        </div>
+                                        <div className="detail-card">
+                                            <p className="detail-label" style={{ color: '#38bdf8' }}>المتوقع في الدرج الآن</p>
+                                            <p className="detail-value" style={{ color: '#38bdf8', fontSize: '1.2rem' }}>
+                                                {parseDecimal(
+                                                    Number(summaryData.currentShift.startingCash) +
+                                                    Number(summaryData.income || 0) -
+                                                    Number(summaryData.expenses || 0)
+                                                )} EGP
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleCloseShift} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                                    <h4 style={{ marginBottom: '1rem' }}>إنهاء الوردية</h4>
+                                    <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                        لإغلاق الوردية، يرجى إدخال المبلغ الفعلي الموجود في الدرج حالياً. النظام سيقوم بحساب العجز أو الزيادة تلقائياً.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <Input
+                                                label="المبلغ الفعلي في الدرج (Actual Cash)"
+                                                type="number"
+                                                name="actualEndingCash"
+                                                value={actualEndingCash}
+                                                onChange={(e) => setActualEndingCash(e.target.value)}
+                                                placeholder="أدخل المبلغ..."
+                                                required
+                                            />
+                                        </div>
+                                        <Button type="submit" disabled={isSubmitting} style={{ background: 'var(--bg-darker)', color: '#fca5a5', border: '1px solid #ef4444' }}>
+                                            <LogOut size={16} style={{ marginRight: '8px' }} />
+                                            {isSubmitting ? 'جاري الإغلاق...' : 'إغلاق الوردية'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        ) : (
+                            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '2rem', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-muted)' }}>لا يوجد وردية مفتوحة الآن</h3>
+                                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>
+                                    يجب فتح وردية جديدة قبل البدء بتسجيل المبيعات، الاشتراكات أو حركة الخزينة.
+                                </p>
+
+                                <form onSubmit={handleOpenShift} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                                    <h4 style={{ marginBottom: '1rem' }}>إنشاء وردية جديدة</h4>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <Input
+                                                label="عهدة الدرج الافتتاحية (Starting Cash)"
+                                                type="number"
+                                                name="startingCash"
+                                                value={startingCash}
+                                                onChange={(e) => setStartingCash(e.target.value)}
+                                                placeholder="مثال: 500"
+                                                required
+                                            />
+                                        </div>
+                                        <Button type="submit" disabled={isSubmitting}>
+                                            <LogIn size={16} style={{ marginRight: '8px' }} />
+                                            {isSubmitting ? 'جاري الفتح...' : 'افتح الوردية'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </DashboardLayout>
+    );
+};
+
+export default AccountingShift;
