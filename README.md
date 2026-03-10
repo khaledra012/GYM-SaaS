@@ -1,16 +1,72 @@
-# React + Vite
+# GYM-SaaS - Smart Gym Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive Gym Management System built as a Software as a Service (SaaS) to streamline daily administrative operations. The system provides an interactive and modern user interface that allows gym managers and owners full control over trainees, subscriptions, attendance, and financials with ease and flexibility.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌟 Key Features
 
-## React Compiler
+- 📊 **Statistical Dashboard:** A quick overview of revenue, active members, and subscriptions.
+- 👥 **Members Management:** Add, edit, and view members' training profiles and track their status.
+- 📋 **Plans Management:** Create various training plans (time-based or session-based) with different prices and features.
+- 🎟️ **Subscriptions Management:** 
+  - Support for time-based subscriptions.
+  - Support for session-based subscriptions.
+  - Filter subscriptions (Active, Expiring Soon, Expired).
+  - Flexible subscription renewal system (same plan, new plan, or custom manual renewal).
+- ✔️ **Check-In / Today Log System:** A quick interface to scan and confirm attendance for gym members and a daily log of movements.
+- 💰 **Accounting Management:**
+  - **Shifts:** Open and close work shifts for employees.
+  - **Ledger:** Track the cash register and expenses.
+  - **History (Transactions):** Review all financial transactions in the gym.
+- 🔐 **Authentication & Security:** Secure system for Login, Register (creating a new account), and resetting/changing passwords.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🛠️ Technology Stack (Frontend)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The frontend of the project is built with the latest web technologies to ensure speed and an excellent user experience:
+- **Core Framework:** [React 19](https://react.dev/)
+- **Bundler:** [Vite](https://vitejs.dev/)
+- **Routing:** [React Router DOM v7](https://reactrouter.com/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Linting:** ESLint
+
+---
+
+## 🚀 Quick Start (Local Setup)
+
+To set up the project on your local machine and start developing, please follow these steps:
+
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run Development Server:**
+   ```bash
+   npm run dev
+   ```
+   This command will start a local server, usually available at `http://localhost:5173`.
+
+3. **Production Build:**
+   ```bash
+   npm run build
+   ```
+
+4. **Preview Build:**
+   ```bash
+   npm run preview
+   ```
+
+---
+
+## 📂 Folder Structure Overview
+
+- `src/pages/` - Contains the main page files such as Dashboard, Members, Plans, etc.
+- `src/components/` - Shared and reusable components like Modals and Buttons.
+- `src/api/` (If applicable) - Contains API integration functions with the backend.
+
+---
+
+> **Note:** This system is designed to be responsive and scalable to serve multiple gyms (Multi-tenant SaaS). To connect it with the backend, please ensure the correct API routes are configured within the project settings.

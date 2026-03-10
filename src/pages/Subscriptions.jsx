@@ -4,6 +4,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import SubscriptionModal from '../components/SubscriptionModal';
 import SubscriptionDetailsModal from '../components/SubscriptionDetailsModal';
 import RenewModal from '../components/RenewModal';
+import RenewExpiredModal from '../components/RenewExpiredModal';
 import DeductModal from '../components/DeductModal';
 import Button from '../components/Button';
 import { subscriptionsAPI, membersAPI } from '../utils/api';
@@ -33,6 +34,7 @@ const Subscriptions = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+    const [isRenewExpiredModalOpen, setIsRenewExpiredModalOpen] = useState(false);
     const [isDeductModalOpen, setIsDeductModalOpen] = useState(false);
     const [selectedSubscription, setSelectedSubscription] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,9 +90,32 @@ const Subscriptions = () => {
         setIsDetailsModalOpen(true);
     };
 
-    const handleRenew = (sub) => {
+    const handleRenew = async (sub) => {
         setSelectedSubscription(sub);
-        setIsRenewModalOpen(true);
+
+        if (sub.status === 'expired') {
+            // Because of pagination, `subscriptions` array may not contain all of the user's subscriptions.
+            // We must do a network check or rely on member's overarching status if they have another active sub.
+            try {
+                // The member's general 'status' flag often becomes 'active' if they hold *any* active subscription.
+                const memberData = await membersAPI.getMember(sub.member?.id);
+                // We consider they have an active subscription if their overarching member status is 'active'.
+                // If the backend has a specific array `memberData.subscriptions`, we could check that too.
+                const hasActive = memberData?.status === 'active' || (memberData?.subscriptions && memberData.subscriptions.some(s => s.status === 'active'));
+
+                if (hasActive) {
+                    alert('هذا العضو لديه اشتراك نشط حالياً. لا يمكن تجديد اشتراك منتهي بينما يوجد اشتراك نشط.');
+                    return;
+                }
+
+                setIsRenewExpiredModalOpen(true);
+            } catch (err) {
+                console.error("Failed to verify member's active status", err);
+                setIsRenewExpiredModalOpen(true); // Fallback to allowing it and letting the backend reject it with 400
+            }
+        } else {
+            setIsRenewModalOpen(true);
+        }
     };
 
     const handleDeduct = (sub) => {
@@ -188,6 +213,27 @@ const Subscriptions = () => {
                 fetchSubscriptions();
             } else {
                 alert(error.message || 'فشل تجديد الاشتراك');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRenewExpiredSubmit = async (formData) => {
+        setIsSubmitting(true);
+        try {
+            await subscriptionsAPI.renewExpiredSubscription(selectedSubscription.id, formData);
+            setIsRenewExpiredModalOpen(false);
+            fetchSubscriptions();
+            // Call stats refresh logic here assuming there is a separate stats context or function
+            // In absence of a global stats refresh, we just re-fetch the list, which updates the local count
+        } catch (error) {
+            if (error.status === 409) {
+                alert('البيانات اتغيّرت من مستخدم آخر، جاري إعادة التحميل...');
+                setIsRenewExpiredModalOpen(false);
+                fetchSubscriptions();
+            } else {
+                alert(error.message || 'فشل تجديد الاشتراك المنتهي');
             }
         } finally {
             setIsSubmitting(false);
@@ -455,7 +501,7 @@ const Subscriptions = () => {
                                                     <button className="btn-icon" title="View Details" onClick={() => handleViewDetails(sub)}>
                                                         <Eye size={16} />
                                                     </button>
-                                                    {sub.status === 'active' && (
+                                                    {(sub.status === 'active' || sub.status === 'expired') && (
                                                         <button className="btn-icon renew" title="Renew" onClick={() => handleRenew(sub)}>
                                                             <RefreshCw size={16} />
                                                         </button>
@@ -532,6 +578,14 @@ const Subscriptions = () => {
                         isOpen={isRenewModalOpen}
                         onClose={() => setIsRenewModalOpen(false)}
                         onSubmit={handleRenewSubmit}
+                        subscription={selectedSubscription}
+                        isLoading={isSubmitting}
+                    />
+
+                    <RenewExpiredModal
+                        isOpen={isRenewExpiredModalOpen}
+                        onClose={() => setIsRenewExpiredModalOpen(false)}
+                        onSubmit={handleRenewExpiredSubmit}
                         subscription={selectedSubscription}
                         isLoading={isSubmitting}
                     />

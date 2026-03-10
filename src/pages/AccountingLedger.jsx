@@ -16,8 +16,11 @@ const AccountingLedger = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Filters
+    const [filterMode, setFilterMode] = useState('single'); // 'single' or 'range'
     const [filters, setFilters] = useState({
         date: new Date().toISOString().split('T')[0],
+        startDate: '',
+        endDate: '',
         type: '',
         category: ''
     });
@@ -38,11 +41,24 @@ const AccountingLedger = () => {
             setIsShiftOpen(!!shiftData);
 
             // Fetch transactions
-            const txRes = await accountingAPI.getTransactions({
+            const txParams = {
                 ...filters,
                 page: pagination.page,
                 limit: pagination.limit
-            });
+            };
+
+            // Clean up parameters based on filter mode
+            if (filterMode === 'single') {
+                delete txParams.startDate;
+                delete txParams.endDate;
+                if (!txParams.date) delete txParams.date;
+            } else {
+                delete txParams.date;
+                if (!txParams.startDate) delete txParams.startDate;
+                if (!txParams.endDate) delete txParams.endDate;
+            }
+
+            const txRes = await accountingAPI.getTransactions(txParams);
             const txData = txRes.data || [];
 
             setTransactions(txData);
@@ -121,15 +137,54 @@ const AccountingLedger = () => {
 
             {/* Filters Section */}
             <div className="glass-panel mb-6" style={{ padding: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <div style={{ flex: '1 1 200px' }}>
-                    <Input
-                        label="التاريخ"
-                        type="date"
-                        name="date"
-                        value={filters.date}
-                        onChange={handleFilterChange}
-                    />
+                <div style={{ flex: '0 0 auto' }} className="form-group mb-0">
+                    <label className="form-label">طريقة التصفية</label>
+                    <select
+                        className="form-input"
+                        value={filterMode}
+                        onChange={(e) => {
+                            setFilterMode(e.target.value);
+                            setPagination({ ...pagination, page: 1 });
+                        }}
+                        style={{ paddingLeft: '1rem', minWidth: '150px' }}
+                    >
+                        <option value="single">يوم محدد</option>
+                        <option value="range">فترة زمنية</option>
+                    </select>
                 </div>
+
+                {filterMode === 'single' ? (
+                    <div style={{ flex: '1 1 200px' }}>
+                        <Input
+                            label="التاريخ"
+                            type="date"
+                            name="date"
+                            value={filters.date}
+                            onChange={handleFilterChange}
+                        />
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ flex: '1 1 200px' }}>
+                            <Input
+                                label="من تاريخ"
+                                type="date"
+                                name="startDate"
+                                value={filters.startDate}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+                        <div style={{ flex: '1 1 200px' }}>
+                            <Input
+                                label="إلى تاريخ"
+                                type="date"
+                                name="endDate"
+                                value={filters.endDate}
+                                onChange={handleFilterChange}
+                            />
+                        </div>
+                    </>
+                )}
                 <div style={{ flex: '1 1 200px' }} className="form-group mb-0">
                     <label className="form-label">النوع</label>
                     <select
@@ -161,7 +216,8 @@ const AccountingLedger = () => {
                 </div>
                 <div>
                     <Button onClick={() => {
-                        setFilters({ date: '', type: '', category: '' });
+                        setFilterMode('single');
+                        setFilters({ date: '', startDate: '', endDate: '', type: '', category: '' });
                         setPagination({ ...pagination, page: 1 });
                     }} style={{ width: 'auto', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
                         مسح الفلاتر
@@ -171,7 +227,16 @@ const AccountingLedger = () => {
 
             {/* Summary Row */}
             {summary && (
-                <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem 1.5rem', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem 1.5rem', borderRadius: '16px', border: '1px solid var(--card-border)', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {summary.periodType && (
+                        <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>الفترة:</span>
+                            <span className="status-badge" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '2px 8px', fontSize: '0.8rem' }}>
+                                {summary.periodType === 'single_day' ? 'يوم واحد' : 'مدة زمنية'}
+                                {summary.dateFrom && summary.dateTo ? ` (${new Date(summary.dateFrom).toLocaleDateString('en-GB')} - ${new Date(summary.dateTo).toLocaleDateString('en-GB')})` : ''}
+                            </span>
+                        </div>
+                    )}
                     <div>
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px' }}>إجمالي الوارد:</span>
                         <span style={{ color: '#39ff14', fontWeight: 'bold' }}>{parseDecimal(summary.totalIn)}</span>

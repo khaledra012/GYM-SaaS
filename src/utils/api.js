@@ -317,6 +317,53 @@ export const subscriptionsAPI = {
         return handleResponse(response);
     },
 
+    // POST /api/v1/subscriptions/:id/renew/expired
+    renewExpiredSubscription: async (id, data) => {
+        const payload = { ...data };
+
+        // Convert price
+        if (payload.pricePaid !== undefined) {
+            payload.pricePaidCents = Math.round(Number(payload.pricePaid) * 100);
+            delete payload.pricePaid;
+        }
+
+        // Remove empty string from startDate so backend falls back to its default (today)
+        if (payload.startDate === '') {
+            delete payload.startDate;
+        }
+
+        // Delete fields not applicable for the chosen mode
+        if (payload.mode === 'same_plan') {
+            delete payload.planId;
+            delete payload.type;
+            delete payload.durationInDays;
+            delete payload.totalSessions;
+        } else if (payload.mode === 'new_plan') {
+            delete payload.type;
+            delete payload.durationInDays;
+            delete payload.totalSessions;
+        } else if (payload.mode === 'manual') {
+            delete payload.planId;
+            if (payload.type === 'time_based') {
+                payload.durationInDays = Number(payload.durationInDays);
+                delete payload.totalSessions;
+            } else if (payload.type === 'session_based') {
+                payload.totalSessions = Number(payload.totalSessions);
+                delete payload.durationInDays;
+            }
+        }
+
+        const response = await fetch(`${BASE_URL}/subscriptions/${id}/renew/expired`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
     // POST /api/v1/subscriptions/:id/freeze
     freezeSubscription: async (id) => {
         const response = await fetch(`${BASE_URL}/subscriptions/${id}/freeze`, {
@@ -465,6 +512,8 @@ export const accountingAPI = {
         if (params.page) query.append('page', params.page);
         if (params.limit) query.append('limit', params.limit);
         if (params.date) query.append('date', params.date);
+        if (params.startDate) query.append('startDate', params.startDate);
+        if (params.endDate) query.append('endDate', params.endDate);
         if (params.type) query.append('type', params.type);
         if (params.category) query.append('category', params.category);
         if (params.shiftId) query.append('shiftId', params.shiftId);
@@ -479,8 +528,20 @@ export const accountingAPI = {
     },
 
     // GET /api/v1/accounting/dashboard/summary
-    getDashboardSummary: async (date) => {
-        const url = `${BASE_URL}/accounting/dashboard/summary${date ? `?date=${date}` : ''}`;
+    getDashboardSummary: async (params = {}) => {
+        const query = new URLSearchParams();
+        // Support old format where params might be just a date string for backward compatibility
+        if (typeof params === 'string') {
+            query.append('date', params);
+        } else {
+            if (params.date) query.append('date', params.date);
+            if (params.startDate) query.append('startDate', params.startDate);
+            if (params.endDate) query.append('endDate', params.endDate);
+        }
+
+        const queryString = query.toString();
+        const url = `${BASE_URL}/accounting/dashboard/summary${queryString ? `?${queryString}` : ''}`;
+
         const response = await fetch(url, {
             headers: { ...getAuthHeader() }
         });

@@ -14,10 +14,26 @@ const AccountingShift = () => {
     const [startingCash, setStartingCash] = useState('');
     const [actualEndingCash, setActualEndingCash] = useState('');
 
+    // Filter states
+    const [filterMode, setFilterMode] = useState('single'); // 'single' or 'range'
+    const [dateSingle, setDateSingle] = useState(new Date().toISOString().split('T')[0]);
+    const [dateRange, setDateRange] = useState({
+        startDate: '',
+        endDate: ''
+    });
+
     const fetchSummary = async () => {
         setIsLoading(true);
         try {
-            const res = await accountingAPI.getDashboardSummary();
+            const params = {};
+            if (filterMode === 'single' && dateSingle) {
+                params.date = dateSingle;
+            } else if (filterMode === 'range' && dateRange.startDate && dateRange.endDate) {
+                params.startDate = dateRange.startDate;
+                params.endDate = dateRange.endDate;
+            }
+
+            const res = await accountingAPI.getDashboardSummary(params);
             // The API wrapper usually returns the `data` payload if it follows standard formatting
             // Depending on how `handleResponse` is written, it might return { status, data: { ... } } or just the inner data.
             const dataToSet = res.data || res;
@@ -32,7 +48,8 @@ const AccountingShift = () => {
 
     useEffect(() => {
         fetchSummary();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterMode, dateSingle, dateRange]);
 
     const handleOpenShift = async (e) => {
         e.preventDefault();
@@ -90,6 +107,62 @@ const AccountingShift = () => {
                     </div>
                 )}
             </div>
+
+            {/* Filters Section */}
+            <div className="glass-panel mb-6" style={{ padding: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: '0 0 auto' }} className="form-group mb-0">
+                    <label className="form-label">طريقة التصفية</label>
+                    <select
+                        className="form-input"
+                        value={filterMode}
+                        onChange={(e) => setFilterMode(e.target.value)}
+                        style={{ paddingLeft: '1rem', minWidth: '150px' }}
+                    >
+                        <option value="single">يوم محدد</option>
+                        <option value="range">فترة زمنية</option>
+                    </select>
+                </div>
+
+                {filterMode === 'single' ? (
+                    <div style={{ flex: '1 1 200px' }}>
+                        <Input
+                            label="التاريخ"
+                            type="date"
+                            value={dateSingle}
+                            onChange={(e) => setDateSingle(e.target.value)}
+                        />
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ flex: '1 1 200px' }}>
+                            <Input
+                                label="من تاريخ"
+                                type="date"
+                                value={dateRange.startDate}
+                                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                            />
+                        </div>
+                        <div style={{ flex: '1 1 200px' }}>
+                            <Input
+                                label="إلى تاريخ"
+                                type="date"
+                                value={dateRange.endDate}
+                                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                            />
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {summaryData?.periodType && (
+                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>الفترة المعروضة:</span>
+                    <span className="status-badge" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '4px 12px' }}>
+                        {summaryData.periodType === 'single_day' ? 'يوم واحد' : 'مدة زمنية'}
+                        {summaryData.dateFrom && summaryData.dateTo ? ` (${new Date(summaryData.dateFrom).toLocaleDateString('en-GB')} - ${new Date(summaryData.dateTo).toLocaleDateString('en-GB')})` : ''}
+                    </span>
+                </div>
+            )}
 
             {isLoading ? (
                 <div className="glass-panel"><p>جاري التحميل...</p></div>
