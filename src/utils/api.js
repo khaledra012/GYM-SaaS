@@ -1,4 +1,4 @@
-const BASE_URL = 'gym-saas-backend-production.up.railway.app';
+const BASE_URL = 'gym-saas-backend-production.up.railway.app/api/v1';
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
