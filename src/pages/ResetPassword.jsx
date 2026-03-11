@@ -20,12 +20,12 @@ const ResetPassword = () => {
         setError('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError('كلمات المرور غير متطابقة');
             return;
         }
 
         if (password.length < 8) {
-            setError('Password must be at least 8 characters long');
+            setError('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
             return;
         }
 
@@ -37,7 +37,7 @@ const ResetPassword = () => {
                 navigate('/login');
             }, 3000);
         } catch (err) {
-            setError(err.message || 'An error occurred. Please try again.');
+            setError(err.message || 'حدث خطأ. حاول مرة أخرى.');
         } finally {
             setIsLoading(false);
         }

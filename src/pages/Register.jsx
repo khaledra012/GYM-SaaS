@@ -31,7 +31,7 @@ const Register = () => {
             alert('تم إنشاء الحساب بنجاح! برجاء تسجيل الدخول.');
             navigate('/login');
         } catch (err) {
-            setError(err.message || 'Registration failed. Please try again.');
+            setError(err.message || 'فشل إنشاء الحساب. حاول مرة أخرى.');
         } finally {
             setIsLoading(false);
         }

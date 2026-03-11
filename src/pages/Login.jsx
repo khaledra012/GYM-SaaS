@@ -43,7 +43,7 @@ const Login = () => {
             // Navigate to dashboard
             navigate('/dashboard');
         } catch (err) {
-            setError(err.message || 'Login failed. Please check your credentials.');
+            setError(err.message || 'فشل تسجيل الدخول. تأكد من بياناتك.');
         } finally {
             setIsLoading(false);
         }

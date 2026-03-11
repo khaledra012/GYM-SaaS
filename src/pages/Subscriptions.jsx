@@ -125,7 +125,7 @@ const Subscriptions = () => {
 
     const handleFreeze = async (sub) => {
         const action = sub.status === 'frozen' ? 'unfreeze' : 'freeze';
-        if (window.confirm(`Are you sure you want to ${action} this subscription for ${sub.member.name}?`)) {
+        if (window.confirm(`هل أنت متأكد من ${action === 'freeze' ? 'تجميد' : 'إلغاء تجميد'} اشتراك ${sub.member.name}؟`)) {
             try {
                 if (action === 'freeze') {
                     await subscriptionsAPI.freezeSubscription(sub.id);
@@ -138,7 +138,7 @@ const Subscriptions = () => {
                     alert('البيانات اتغيّرت من مستخدم آخر، جاري إعادة التحميل...');
                     fetchSubscriptions();
                 } else if (error.status === 400 && error.message.toLowerCase().includes('expire')) {
-                    alert(error.message || 'Subscription is expired, refreshing data...');
+                    alert(error.message || 'الاشتراك منتهي الصلاحية، جاري تحديث البيانات...');
                     fetchSubscriptions();
                 } else {
                     alert(error.message || 'فشلت العملية');
@@ -148,7 +148,7 @@ const Subscriptions = () => {
     };
 
     const handleCancel = async (sub) => {
-        if (window.confirm(`Are you sure you want to cancel the subscription for ${sub.member.name}?`)) {
+        if (window.confirm(`هل أنت متأكد من إلغاء اشتراك ${sub.member.name}؟`)) {
             try {
                 await subscriptionsAPI.cancelSubscription(sub.id);
                 fetchSubscriptions();
@@ -157,7 +157,7 @@ const Subscriptions = () => {
                     alert('البيانات اتغيّرت من مستخدم آخر، جاري إعادة التحميل...');
                     fetchSubscriptions();
                 } else if (error.status === 400 && error.message.toLowerCase().includes('expire')) {
-                    alert(error.message || 'Subscription is expired, refreshing data...');
+                    alert(error.message || 'الاشتراك منتهي الصلاحية، جاري تحديث البيانات...');
                     fetchSubscriptions();
                 } else {
                     alert(error.message || 'فشل إلغاء الاشتراك');
@@ -176,7 +176,7 @@ const Subscriptions = () => {
                 const newMemberId = memberRes.member?.id || memberRes.data?.id || memberRes.id;
 
                 if (!newMemberId) {
-                    throw new Error("Member created but failed to retrieve ID for subscription.");
+                    throw new Error('تم إنشاء العضو لكن فشل الحصول على المعرف لإنشاء الاشتراك.');
                 }
 
                 // 2. Create the subscription using the new member ID
@@ -208,7 +208,7 @@ const Subscriptions = () => {
                 setIsRenewModalOpen(false);
                 fetchSubscriptions();
             } else if (error.status === 400 && error.message.toLowerCase().includes('expire')) {
-                alert(error.message || 'Subscription is expired, refreshing data...');
+                alert(error.message || 'الاشتراك منتهي الصلاحية، جاري تحديث البيانات...');
                 setIsRenewModalOpen(false);
                 fetchSubscriptions();
             } else {
@@ -252,7 +252,7 @@ const Subscriptions = () => {
                 setIsDeductModalOpen(false);
                 fetchSubscriptions();
             } else if (error.status === 400 && error.message.toLowerCase().includes('expire')) {
-                alert(error.message || 'Subscription is expired, refreshing data...');
+                alert(error.message || 'الاشتراك منتهي الصلاحية، جاري تحديث البيانات...');
                 setIsDeductModalOpen(false);
                 fetchSubscriptions();
             } else {

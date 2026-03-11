@@ -21,7 +21,7 @@ const ForgotPassword = () => {
             await authAPI.forgotPassword(email);
             setIsSubmitted(true);
         } catch (err) {
-            setError(err.message || 'Failed to send recovery instructions.');
+            setError(err.message || 'فشل إرسال رابط استعادة كلمة المرور.');
         } finally {
             setIsLoading(false);
         }

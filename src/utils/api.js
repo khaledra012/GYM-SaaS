@@ -13,16 +13,48 @@ const handleResponse = async (response) => {
 
     // Check HTTP status first
     if (!response.ok) {
-        // Backend returns { status: "fail", errors: [{ field, message }] }
+        // Build a meaningful Arabic error message based on status code
+        let msg = '';
+
+        // If backend sent structured errors array
         if (data.errors && Array.isArray(data.errors)) {
-            const msg = data.errors.map(e => e.message).join('\n');
-            const error = new Error(msg);
-            error.status = response.status;
-            throw error;
+            msg = data.errors.map(e => e.message).join('\n');
+        } else if (data.message) {
+            msg = data.message;
         }
 
-        const error = new Error(data.message || 'حدث خطأ في العملية');
+        // Map status codes to Arabic fallback messages
+        const statusMessages = {
+            400: msg || 'البيانات المرسلة غير صحيحة. تأكد من المدخلات وحاول مرة أخرى.',
+            401: 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى.',
+            403: msg || 'حسابك غير مفعل أو ليس لديك صلاحية لهذا الإجراء. تواصل مع الدعم.',
+            404: msg || 'العنصر المطلوب غير موجود.',
+            409: msg || 'يوجد تعارض في البيانات. قد يكون العنصر موجود بالفعل.',
+            422: msg || 'البيانات المرسلة غير مكتملة أو غير صالحة.',
+            429: 'عدد الطلبات كثير جداً. انتظر قليلاً وحاول مرة أخرى.',
+            500: 'حدث خطأ في السيرفر. حاول مرة أخرى لاحقاً.',
+        };
+
+        const errorMessage = statusMessages[response.status] || msg || 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+
+        // Auto-logout on 403 (account deactivated/unsubscribed) or 401 (session expired)
+        // Only for client routes — NOT for platform-admin routes
+        const isAdminRoute = window.location.pathname.startsWith('/platform-admin');
+        if (!isAdminRoute && (response.status === 403 || response.status === 401)) {
+            const logoutMessage = response.status === 403
+                ? 'تم إيقاف حسابك أو انتهت فترة التجربة.\nتواصل مع الدعم لإعادة التفعيل.'
+                : 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى.';
+
+            alert(logoutMessage);
+            localStorage.removeItem('token');
+            localStorage.removeItem('gymName');
+            window.location.href = '/login';
+            return; // Stop execution
+        }
+
+        const error = new Error(errorMessage);
         error.status = response.status;
+        error.serverMessage = msg; // Keep the original server message for debugging
         throw error;
     }
 
@@ -55,6 +87,28 @@ export const authAPI = {
         const token = data.data?.token || data.token;
         if (token) {
             localStorage.setItem('token', token);
+        }
+        // Persist center billing info for the trial/subscription banner
+        const center = data.data?.center || data.center;
+        if (center) {
+            if (center.name) localStorage.setItem('gymName', center.name);
+            if (center.billingStatus) localStorage.setItem('billingStatus', center.billingStatus);
+
+            // Trial info
+            if (center.trialDaysLeft !== undefined && center.trialDaysLeft !== null) {
+                localStorage.setItem('trialDaysLeft', center.trialDaysLeft);
+            } else if (center.trialEndsAt) {
+                const tDaysLeft = Math.ceil((new Date(center.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
+                localStorage.setItem('trialDaysLeft', Math.max(0, tDaysLeft));
+            }
+
+            // Subscription info
+            if (center.subscriptionDaysLeft !== undefined && center.subscriptionDaysLeft !== null) {
+                localStorage.setItem('subscriptionDaysLeft', center.subscriptionDaysLeft);
+            } else if (center.subscriptionEndsAt) {
+                const sDaysLeft = Math.ceil((new Date(center.subscriptionEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
+                localStorage.setItem('subscriptionDaysLeft', Math.max(0, sDaysLeft));
+            }
         }
         return data;
     },
@@ -544,6 +598,89 @@ export const accountingAPI = {
 
         const response = await fetch(url, {
             headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    }
+};
+
+// ─── Platform Admin (Super Admin) ────────────────────────────────────
+
+const getAdminAuthHeader = () => {
+    const token = localStorage.getItem('admin_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+export const platformAdminAPI = {
+    // POST /api/v1/platform-admin/auth/login
+    login: async (email, password) => {
+        const response = await fetch(`${BASE_URL}/platform-admin/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await handleResponse(response);
+        const token = data.data?.token || data.token;
+        if (token) {
+            localStorage.setItem('admin_token', token);
+        }
+        return data;
+    },
+
+    // GET /api/v1/platform-admin/dashboard/summary
+    getDashboardSummary: async () => {
+        const response = await fetch(`${BASE_URL}/platform-admin/dashboard/summary`, {
+            headers: { ...getAdminAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // GET /api/v1/platform-admin/centers?page=&limit=&billingStatus=&search=
+    getCenters: async (params = {}) => {
+        const query = new URLSearchParams();
+        if (params.page) query.append('page', params.page);
+        if (params.limit) query.append('limit', params.limit);
+        if (params.billingStatus) query.append('billingStatus', params.billingStatus);
+        if (params.search) query.append('search', params.search);
+
+        const queryString = query.toString();
+        const response = await fetch(`${BASE_URL}/platform-admin/centers${queryString ? `?${queryString}` : ''}`, {
+            headers: { ...getAdminAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/platform-admin/centers/:centerId/billing-status
+    updateBillingStatus: async (centerId, body) => {
+        const response = await fetch(`${BASE_URL}/platform-admin/centers/${centerId}/billing-status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAdminAuthHeader()
+            },
+            body: JSON.stringify(body),
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/platform-admin/centers/:centerId/activate
+    // body: { subscriptionDurationDays } | { subscriptionEndsAt } | {}
+    activateCenter: async (centerId, body = {}) => {
+        const response = await fetch(`${BASE_URL}/platform-admin/centers/${centerId}/activate`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAdminAuthHeader()
+            },
+            body: JSON.stringify(body),
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/platform-admin/centers/:centerId/deactivate
+    deactivateCenter: async (centerId) => {
+        const response = await fetch(`${BASE_URL}/platform-admin/centers/${centerId}/deactivate`, {
+            method: 'PATCH',
+            headers: { ...getAdminAuthHeader() }
         });
         return handleResponse(response);
     }

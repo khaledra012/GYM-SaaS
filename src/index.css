@@ -1128,3 +1128,47 @@ body {
     font-size: 2rem;
   }
 }
+
+/* ─── Super Admin Overrides ─── */
+.sa-sidebar .nav-link.sa-active {
+  background: rgba(167, 139, 250, 0.1);
+  color: #a78bfa;
+}
+
+/* RTL Text Helpers */
+.rtl-text {
+  direction: rtl;
+  text-align: right;
+}
+
+.rtl-text input,
+.rtl-text select {
+  direction: rtl;
+  text-align: right;
+}
+
+.rtl-text .input-icon {
+  left: auto;
+  right: 1.25rem;
+}
+
+.rtl-text .form-input.with-icon {
+  padding-left: 1rem;
+  padding-right: 3.25rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
