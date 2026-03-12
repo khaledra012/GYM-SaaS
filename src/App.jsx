@@ -17,7 +17,7 @@ import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import './index.css';
 
-// Simple Auth Protection
+// Simple auth protection
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -26,13 +26,26 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
-// Platform Admin Auth Protection
+// Platform admin auth protection
 const PlatformAdminRoute = ({ children }) => {
   const token = localStorage.getItem('admin_token');
   if (!token) {
     return <Navigate to="/platform-admin/login" replace />;
   }
   return children;
+};
+
+// Redirect unknown URLs so the app never renders an empty screen.
+const UnknownRouteRedirect = () => {
+  const hasUserToken = Boolean(localStorage.getItem('token'));
+  const hasAdminToken = Boolean(localStorage.getItem('admin_token'));
+  const isPlatformAdminPath = window.location.pathname.startsWith('/platform-admin');
+
+  if (isPlatformAdminPath) {
+    return <Navigate to={hasAdminToken ? '/platform-admin/dashboard' : '/platform-admin/login'} replace />;
+  }
+
+  return <Navigate to={hasUserToken ? '/dashboard' : '/login'} replace />;
 };
 
 function App() {
@@ -45,7 +58,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-        {/* Protected Routes */}
+        {/* Protected routes */}
         <Route
           path="/dashboard"
           element={
@@ -119,7 +132,8 @@ function App() {
           }
         />
 
-        {/* Platform Admin Routes — Completely Separate */}
+        {/* Platform admin routes */}
+        <Route path="/platform-admin" element={<Navigate to="/platform-admin/login" replace />} />
         <Route path="/platform-admin/login" element={<SuperAdminLogin />} />
         <Route
           path="/platform-admin/dashboard"
@@ -129,6 +143,9 @@ function App() {
             </PlatformAdminRoute>
           }
         />
+
+        {/* Catch unknown URLs */}
+        <Route path="*" element={<UnknownRouteRedirect />} />
       </Routes>
     </Router>
   );

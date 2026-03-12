@@ -1,31 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserCheck, Clock, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import StatCard from '../components/StatCard';
-import { membersAPI, subscriptionsAPI } from '../utils/api';
+import { membersAPI } from '../utils/api';
+
+const DEFAULT_STATS = {
+    totalMembers: 0,
+    activeMembers: 0,
+    expiringSoon: 0,
+    newMembers: 0,
+    todayCheckedInMembers: 0,
+};
+
+const normalizeDashboardData = (payload) => {
+    const source = payload?.stats || payload?.data?.stats || payload?.data || payload || {};
+
+    const expiringSoonItems = Array.isArray(source.expiringSoonItems)
+        ? source.expiringSoonItems
+        : Array.isArray(payload?.expiringSoonItems)
+            ? payload.expiringSoonItems
+            : Array.isArray(payload?.data?.expiringSoonItems)
+                ? payload.data.expiringSoonItems
+                : [];
+
+    return {
+        stats: {
+            totalMembers: Number(source.totalMembers ?? source.total ?? 0),
+            activeMembers: Number(source.activeMembers ?? source.active ?? 0),
+            expiringSoon: Number(source.expiringSoon ?? expiringSoonItems.length ?? 0),
+            newMembers: Number(source.newMembers ?? source.newThisMonth ?? 0),
+            todayCheckedInMembers: Number(source.todayCheckedInMembers ?? source.todayCheckedIn ?? 0),
+        },
+        expiringSoonItems,
+    };
+};
 
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const [stats, setStats] = useState({
-        totalMembers: 0,
-        activeMembers: 0,
-        expiringSoon: 0,
-        newMembers: 0,
-        todayCheckedInMembers: 0
-    });
+    const [stats, setStats] = useState(DEFAULT_STATS);
     const [expiringSubscriptions, setExpiringSubscriptions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch stats from unified endpoint
                 const data = await membersAPI.getStats();
-                setStats(data.stats);
+                const normalized = normalizeDashboardData(data);
 
-                const expiringList = data.stats?.expiringSoonItems || [];
-                setExpiringSubscriptions(expiringList);
+                setStats(normalized.stats);
+                setExpiringSubscriptions(normalized.expiringSoonItems);
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
                 setStats({
@@ -33,8 +55,9 @@ const Dashboard = () => {
                     activeMembers: 94,
                     expiringSoon: 12,
                     newMembers: 8,
-                    todayCheckedInMembers: 57
+                    todayCheckedInMembers: 57,
                 });
+                setExpiringSubscriptions([]);
             } finally {
                 setIsLoading(false);
             }
@@ -129,4 +152,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
