@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -49,9 +49,20 @@ const UnknownRouteRedirect = () => {
   return <Navigate to={hasUserToken ? '/dashboard' : '/login'} replace />;
 };
 
-function App() {
+const AppContent = () => {
+  const { pathname } = useLocation();
+  const hasUserToken = Boolean(localStorage.getItem('token'));
+  const isAdminRoute = pathname.startsWith('/platform-admin');
+  const isAuthPage =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password' ||
+    pathname.startsWith('/reset-password');
+
+  const shouldShowSupportFooter = hasUserToken && !isAdminRoute && !isAuthPage;
+
   return (
-    <Router>
+    <>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
@@ -148,7 +159,15 @@ function App() {
         {/* Catch unknown URLs */}
         <Route path="*" element={<UnknownRouteRedirect />} />
       </Routes>
-      <SupportFooter />
+      {shouldShowSupportFooter ? <SupportFooter /> : null}
+    </>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
