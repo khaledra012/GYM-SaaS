@@ -97,8 +97,8 @@ const AccountingShift = () => {
         <DashboardLayout>
             <div className="flex-between page-header mb-8">
                 <header>
-                    <h1 className="page-title">الملخص والوردية</h1>
-                    <p className="page-subtitle">إدارة عهدة الخزنة، فتح وإغلاق الورديات، وملخص اليوم المالي.</p>
+                    <h1 className="page-title">Summary & Shift</h1>
+                    <p className="page-subtitle">Manage safe cash, open and close shifts, and daily financial summary.</p>
                 </header>
                 {/* Status Badge here */}
                 {summaryData && (
@@ -171,7 +171,7 @@ const AccountingShift = () => {
                     {/* Financial Summary Cards */}
                     <div className="stats-grid">
                         <div className="stat-card">
-                            <div className="stat-icon-wrapper" style={{ color: '#39ff14', background: 'rgba(57, 255, 20, 0.1)' }}>
+                            <div className="stat-icon-wrapper" style={{ color: 'var(--accent-neon)', background: 'var(--accent-neon-light)' }}>
                                 <TrendingUp size={24} />
                             </div>
                             <h3 className="stat-label">إجمالي الدخل (Income)</h3>
@@ -211,7 +211,7 @@ const AccountingShift = () => {
                         </h2>
 
                         {summaryData?.hasOpenShift ? (
-                            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(57, 255, 20, 0.2)' }}>
+                            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '2rem', borderRadius: '16px', border: '1px solid var(--accent-neon-border)' }}>
                                 <div style={{ marginBottom: '2rem' }}>
                                     <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-main)' }}>وردية حالية معلقة</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>

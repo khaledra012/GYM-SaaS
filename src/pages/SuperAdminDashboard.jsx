@@ -12,7 +12,7 @@ const BILLING_LABELS = {
 
 const BILLING_COLORS = {
     trial: { bg: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24', border: 'rgba(251, 191, 36, 0.25)' },
-    subscribed: { bg: 'rgba(57, 255, 20, 0.1)', color: '#39ff14', border: 'rgba(57, 255, 20, 0.25)' },
+    subscribed: { bg: 'var(--accent-neon-light)', color: 'var(--accent-neon)', border: 'var(--accent-neon-border)' },
     unsubscribed: { bg: 'rgba(239, 68, 68, 0.12)', color: '#fca5a5', border: 'rgba(239, 68, 68, 0.25)' }
 };
 
@@ -266,7 +266,7 @@ const SuperAdminDashboard = () => {
     const statItems = summary ? [
         { icon: Building2, label: 'إجمالي المراكز', value: summary.totalCenters, color: '#a78bfa' },
         { icon: Clock, label: 'فترة تجربة', value: summary.trialCenters, color: '#fbbf24' },
-        { icon: CheckCircle, label: 'مفعل', value: summary.subscribedCenters, color: '#39ff14' },
+        { icon: CheckCircle, label: 'مفعل', value: summary.subscribedCenters, color: 'var(--accent-neon)' },
         { icon: XCircle, label: 'غير مشترك', value: summary.unsubscribedCenters, color: '#ef4444' },
         { icon: AlertTriangle, label: 'تجربة تنتهي قريباً', value: summary.trialsExpiringSoon, color: '#fb923c' },
         { icon: CreditCard, label: 'اشتراك ينتهي قريباً', value: summary.subscriptionsExpiringSoon ?? 0, color: '#f472b6' },
@@ -361,11 +361,12 @@ const SuperAdminDashboard = () => {
                                         <th style={{ textAlign: 'right' }}>#</th>
                                         <th style={{ textAlign: 'right' }}>اسم المركز</th>
                                         <th style={{ textAlign: 'right' }}>الإيميل</th>
+                                        <th style={{ textAlign: 'right' }}>الموبايل</th>
                                         <th style={{ textAlign: 'right' }}>الحالة</th>
                                         <th style={{ textAlign: 'center', color: '#60a5fa', fontSize: '0.85rem' }}>بداية الاشتراك</th>
                                         <th style={{ textAlign: 'center', color: '#a78bfa', fontSize: '0.85rem' }}>مدة الاشتراك</th>
                                         <th style={{ textAlign: 'center', color: '#fbbf24', fontSize: '0.85rem' }}>تجربة مجانية</th>
-                                        <th style={{ textAlign: 'center', color: '#39ff14', fontSize: '0.85rem' }}>باقي في الاشتراك</th>
+                                        <th style={{ textAlign: 'center', color: 'var(--accent-neon)', fontSize: '0.85rem' }}>باقي في الاشتراك</th>
                                         <th style={{ textAlign: 'right' }}>تاريخ التسجيل</th>
                                         <th style={{ textAlign: 'center' }}>الإجراءات</th>
                                     </tr>
@@ -386,6 +387,11 @@ const SuperAdminDashboard = () => {
                                         const DurationCell = ({ daysLeft, endDate, color, isTrial, billingStatus, durationDays }) => {
                                             // Handling open-ended subscriptions
                                             if (!isTrial && billingStatus === 'subscribed' && durationDays === null) {
+                                                return <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>—</div>;
+                                            }
+
+                                            // If the center is on a free trial, don't show "Expired" for the paid subscription
+                                            if (!isTrial && billingStatus === 'trial') {
                                                 return <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>—</div>;
                                             }
 
@@ -430,8 +436,10 @@ const SuperAdminDashboard = () => {
                                                 <td style={{ color: 'var(--text-muted)' }}>{(page - 1) * limit + idx + 1}</td>
                                                 <td style={{ fontWeight: 600 }}>{center.name}</td>
                                                 <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{center.email}</td>
+                                                <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem', direction: 'ltr', textAlign: 'right' }}>{center.phone || '—'}</td>
                                                 <td>
                                                     <span style={{
+                                                        display: 'inline-block', whiteSpace: 'nowrap',
                                                         padding: '4px 14px', borderRadius: '20px', fontSize: '0.8rem',
                                                         fontWeight: 600, background: statusStyle.bg, color: statusStyle.color,
                                                         border: `1px solid ${statusStyle.border}`
@@ -442,7 +450,7 @@ const SuperAdminDashboard = () => {
                                                 <td style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-primary)' }}>{startDateStr}</td>
                                                 <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--text-primary)' }}>{totalDurationStr}</td>
                                                 <td style={{ textAlign: 'center' }}><DurationCell daysLeft={trialLeft} endDate={trialEnd} color="#fbbf24" isTrial={true} /></td>
-                                                <td style={{ textAlign: 'center' }}><DurationCell daysLeft={subLeft} endDate={subEnd} color="#39ff14" isTrial={false} billingStatus={center.billingStatus} durationDays={subDuration} /></td>
+                                                <td style={{ textAlign: 'center' }}><DurationCell daysLeft={subLeft} endDate={subEnd} color="var(--accent-neon)" isTrial={false} billingStatus={center.billingStatus} durationDays={subDuration} /></td>
                                                 <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{formatDate(center.createdAt)}</td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap' }}>

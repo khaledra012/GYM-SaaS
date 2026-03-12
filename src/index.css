@@ -24,7 +24,33 @@
   --shadow-neon: 0 0 15px rgba(57, 255, 20, 0.3);
   --shadow-neon-strong: 0 0 30px rgba(57, 255, 20, 0.5);
 
+  --accent-neon-light: rgba(57, 255, 20, 0.1);
+  --accent-neon-border: rgba(57, 255, 20, 0.25);
+  --accent-neon-shadow: rgba(57, 255, 20, 0.4);
+
   --font-main: 'Outfit', sans-serif;
+}
+
+body.light-mode {
+  --bg-dark: #f8fafc;
+  --bg-darker: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(0, 0, 0, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --input-border: rgba(0, 0, 0, 0.15);
+  
+  --shadow-neon: 0 4px 15px rgba(0, 0, 0, 0.05);
+  --shadow-neon-strong: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+  /* Adjust green for light mode contrast */
+  --accent-neon: #059669;
+  --accent-neon-hover: #047857;
+  --accent-neon-light: rgba(5, 150, 105, 0.1);
+  --accent-neon-border: rgba(5, 150, 105, 0.25);
+  --accent-neon-shadow: rgba(5, 150, 105, 0.4);
 }
 
 * {
@@ -53,9 +79,20 @@ body {
   width: 100vw;
   height: 100vh;
   z-index: -1;
+  background-color: var(--bg-darker);
+}
+
+body:not(.light-mode) .animated-bg {
   background:
     radial-gradient(circle at 15% 50%, rgba(57, 255, 20, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(30, 41, 59, 0.8) 0%, transparent 50%);
+  background-color: var(--bg-darker);
+}
+
+body.light-mode .animated-bg {
+  background:
+    radial-gradient(circle at 15% 50%, rgba(57, 255, 20, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(241, 245, 249, 0.8) 0%, transparent 50%);
   background-color: var(--bg-darker);
 }
 
@@ -137,6 +174,10 @@ body {
   height: 100vh;
   z-index: 100;
   transition: all 0.3s ease;
+}
+
+body.light-mode .sidebar {
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-header {

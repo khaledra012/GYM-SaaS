@@ -47,7 +47,7 @@ const ResetPassword = () => {
         return (
             <AuthLayout title="PASSWORD RESET">
                 <div className="text-center pointer-events-none mb-6">
-                    <CheckCircle2 size={80} color="var(--accent-neon)" style={{ margin: '0 auto 1.5rem', filter: 'drop-shadow(0 0 10px rgba(57, 255, 20, 0.4))' }} />
+                    <CheckCircle2 size={80} color="var(--accent-neon)" style={{ margin: '0 auto 1.5rem', filter: 'drop-shadow(0 0 10px var(--accent-neon-shadow))' }} />
                     <p style={{ color: 'var(--text-main)', lineHeight: '1.6', fontSize: '1.2rem', fontWeight: 'bold' }}>
                         Password reset successful!
                     </p>

@@ -149,8 +149,8 @@ const CheckIn = () => {
                         style={{
                             padding: '2rem',
                             borderRadius: '16px',
-                            background: result.type === 'success' ? 'rgba(57, 255, 20, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            border: `2px solid ${result.type === 'success' ? 'rgba(57, 255, 20, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                            background: result.type === 'success' ? 'var(--accent-neon-light)' : 'rgba(239, 68, 68, 0.1)',
+                            border: `2px solid ${result.type === 'success' ? 'var(--accent-neon-border)' : 'rgba(239, 68, 68, 0.3)'}`,
                             animation: 'slideUp 0.3s ease-out'
                         }}
                     >

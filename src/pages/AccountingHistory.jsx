@@ -166,7 +166,7 @@ const AccountingHistory = () => {
                                                     : Number(shift.discrepancy) < 0
                                                         ? '#fca5a5' // Red for negative (Deficit)
                                                         : Number(shift.discrepancy) > 0
-                                                            ? '#39ff14' // Green for positive (Surplus)
+                                                            ? 'var(--accent-neon)' // Green for positive (Surplus)
                                                             : 'var(--text-main)' // Neutral for perfect match
                                             }}>
                                                 {shift.discrepancy === null ? '—' : parseDecimal(shift.discrepancy)}

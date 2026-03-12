@@ -169,7 +169,7 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
                         </div>
 
                         {formData.mode === 'same_plan' && (
-                            <div style={{ padding: '1rem', background: 'rgba(57, 255, 20, 0.05)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(57, 255, 20, 0.2)' }}>
+                            <div style={{ padding: '1rem', background: 'var(--accent-neon-light)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--accent-neon-border)' }}>
                                 <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: 0 }}>
                                     سيتم تجديد اشتراك العضو تباعًا لخصائص باقته السابقة <strong>({subscription.plan?.name})</strong>.
                                 </p>

@@ -483,7 +483,7 @@ const Subscriptions = () => {
                                                         <span style={{
                                                             color: daysLeft <= 3 ? '#ef4444' : daysLeft <= 7 ? '#fb923c' : 'var(--accent-neon)',
                                                             fontWeight: '700',
-                                                            background: daysLeft <= 3 ? 'rgba(239, 68, 68, 0.15)' : daysLeft <= 7 ? 'rgba(251, 146, 60, 0.15)' : 'rgba(57, 255, 20, 0.1)',
+                                                            background: daysLeft <= 3 ? 'rgba(239, 68, 68, 0.15)' : daysLeft <= 7 ? 'rgba(251, 146, 60, 0.15)' : 'var(--accent-neon-light)',
                                                             padding: '4px 12px',
                                                             borderRadius: '20px',
                                                             fontSize: '0.85rem'

@@ -124,8 +124,8 @@ const AccountingLedger = () => {
         <DashboardLayout>
             <div className="flex-between page-header mb-8">
                 <header>
-                    <h1 className="page-title">حركة الخزينة</h1>
-                    <p className="page-subtitle">متابعة دفتر الخزنة والمعاملات اليومية (الوارد والمنصرف).</p>
+                    <h1 className="page-title">Safe Ledger</h1>
+                    <p className="page-subtitle">Track safe ledger and daily transactions (In/Out).</p>
                 </header>
                 {isShiftOpen && (
                     <Button onClick={() => setIsModalOpen(true)} style={{ width: 'auto', gap: '8px' }}>
@@ -239,7 +239,7 @@ const AccountingLedger = () => {
                     )}
                     <div>
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px' }}>إجمالي الوارد:</span>
-                        <span style={{ color: '#39ff14', fontWeight: 'bold' }}>{parseDecimal(summary.totalIn)}</span>
+                        <span style={{ color: 'var(--accent-neon)', fontWeight: 'bold' }}>{parseDecimal(summary.totalIn)}</span>
                     </div>
                     <div>
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px' }}>إجمالي المنصرف:</span>
@@ -277,7 +277,7 @@ const AccountingLedger = () => {
                                             <td style={{ color: 'var(--text-muted)' }}>#{tx.displayNumber || tx.id}</td>
                                             <td>{new Date(tx.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                             <td>{getTypeBadge(tx.type)}</td>
-                                            <td style={{ fontWeight: 'bold', color: tx.type === 'IN' ? '#39ff14' : '#fca5a5' }}>
+                                            <td style={{ fontWeight: 'bold', color: tx.type === 'IN' ? 'var(--accent-neon)' : '#fca5a5' }}>
                                                 {parseDecimal(tx.amount)}
                                             </td>
                                             <td>{TRANSACTION_CATEGORIES[tx.category] || tx.category}</td>

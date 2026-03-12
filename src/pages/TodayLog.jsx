@@ -58,7 +58,7 @@ const TodayLog = () => {
 
     const getStatusStyle = (status) => {
         if (status === 'approved') {
-            return { color: 'var(--accent-neon)', background: 'rgba(57, 255, 20, 0.1)' };
+            return { color: 'var(--accent-neon)', background: 'var(--accent-neon-light)' };
         }
         return { color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' };
     };
