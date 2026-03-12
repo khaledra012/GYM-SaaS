@@ -15,6 +15,7 @@ import AccountingLedger from './pages/AccountingLedger';
 import AccountingHistory from './pages/AccountingHistory';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SupportFooter from './components/SupportFooter';
 import './index.css';
 
 // Simple auth protection
@@ -147,6 +148,7 @@ function App() {
         {/* Catch unknown URLs */}
         <Route path="*" element={<UnknownRouteRedirect />} />
       </Routes>
+      <SupportFooter />
     </Router>
   );
 }

@@ -15,6 +15,9 @@ const handleResponse = async (response) => {
     if (!response.ok) {
         // Build a meaningful Arabic error message based on status code
         let msg = '';
+        const isLoginRequest =
+            response.url?.includes('/auth/login') ||
+            response.url?.includes('/platform-admin/auth/login');
 
         // If backend sent structured errors array
         if (data.errors && Array.isArray(data.errors)) {
@@ -26,7 +29,9 @@ const handleResponse = async (response) => {
         // Map status codes to Arabic fallback messages
         const statusMessages = {
             400: msg || 'البيانات المرسلة غير صحيحة. تأكد من المدخلات وحاول مرة أخرى.',
-            401: 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى.',
+            401: isLoginRequest
+                ? '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629.'
+                : (msg || '\u0627\u0646\u062a\u0647\u062a \u0635\u0644\u0627\u062d\u064a\u0629 \u0627\u0644\u062c\u0644\u0633\u0629. \u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.'),
             403: msg || 'حسابك غير مفعل أو ليس لديك صلاحية لهذا الإجراء. تواصل مع الدعم.',
             404: msg || 'العنصر المطلوب غير موجود.',
             409: msg || 'يوجد تعارض في البيانات. قد يكون العنصر موجود بالفعل.',
@@ -40,7 +45,7 @@ const handleResponse = async (response) => {
         // Auto-logout on 403 (account deactivated/unsubscribed) or 401 (session expired)
         // Only for client routes — NOT for platform-admin routes
         const isAdminRoute = window.location.pathname.startsWith('/platform-admin');
-        if (!isAdminRoute && (response.status === 403 || response.status === 401)) {
+        if (!isLoginRequest && !isAdminRoute && (response.status === 403 || response.status === 401)) {
             const logoutMessage = response.status === 403
                 ? 'تم إيقاف حسابك أو انتهت فترة التجربة.\nتواصل مع الدعم لإعادة التفعيل.'
                 : 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى.';
