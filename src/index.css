@@ -756,6 +756,24 @@ body.light-mode .sidebar {
   border: 1px solid rgba(251, 191, 36, 0.25);
 }
 
+.status-badge.unpaid {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.status-badge.partially_paid {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.status-badge.paid {
+  background: rgba(57, 255, 20, 0.1);
+  color: var(--accent-neon);
+  border: 1px solid rgba(57, 255, 20, 0.2);
+}
+
 /* Action Buttons */
 .action-btns {
   display: flex;

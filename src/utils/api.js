@@ -5,6 +5,11 @@ const getAuthHeader = () => {
     return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+const toCents = (value) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    return Math.round(Number(value) * 100);
+};
+
 const handleResponse = async (response) => {
     // Handle 204 No Content (e.g., DELETE)
     if (response.status === 204) return null;
@@ -324,8 +329,14 @@ export const subscriptionsAPI = {
     addSubscription: async (subData) => {
         const payload = { ...subData };
         if (payload.pricePaid !== undefined) {
-            payload.pricePaidCents = Math.round(Number(payload.pricePaid) * 100);
+            payload.pricePaidCents = toCents(payload.pricePaid);
             delete payload.pricePaid;
+        }
+        if (payload.totalPrice === '' || payload.totalPrice === null) {
+            delete payload.totalPrice;
+        } else if (payload.totalPrice !== undefined) {
+            payload.totalPriceCents = toCents(payload.totalPrice);
+            delete payload.totalPrice;
         }
 
         // Clean up payload based on source
@@ -359,8 +370,14 @@ export const subscriptionsAPI = {
     renewSubscription: async (id, data) => {
         const payload = { ...data };
         if (payload.pricePaid !== undefined) {
-            payload.pricePaidCents = Math.round(Number(payload.pricePaid) * 100);
+            payload.pricePaidCents = toCents(payload.pricePaid);
             delete payload.pricePaid;
+        }
+        if (payload.totalPrice === '' || payload.totalPrice === null) {
+            delete payload.totalPrice;
+        } else if (payload.totalPrice !== undefined) {
+            payload.totalPriceCents = toCents(payload.totalPrice);
+            delete payload.totalPrice;
         }
 
         const endpointSuffix = payload.extraDays !== undefined ? 'time' : 'sessions';
@@ -382,8 +399,14 @@ export const subscriptionsAPI = {
 
         // Convert price
         if (payload.pricePaid !== undefined) {
-            payload.pricePaidCents = Math.round(Number(payload.pricePaid) * 100);
+            payload.pricePaidCents = toCents(payload.pricePaid);
             delete payload.pricePaid;
+        }
+        if (payload.totalPrice === '' || payload.totalPrice === null) {
+            delete payload.totalPrice;
+        } else if (payload.totalPrice !== undefined) {
+            payload.totalPriceCents = toCents(payload.totalPrice);
+            delete payload.totalPrice;
         }
 
         // Remove empty string from startDate so backend falls back to its default (today)
@@ -446,6 +469,25 @@ export const subscriptionsAPI = {
         const response = await fetch(`${BASE_URL}/subscriptions/${id}/cancel`, {
             method: 'POST',
             headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // POST /api/v1/subscriptions/:id/refund
+    refundSubscription: async (id, data) => {
+        const payload = { ...data };
+        if (payload.refundAmount !== undefined) {
+            payload.refundAmountCents = toCents(payload.refundAmount);
+            delete payload.refundAmount;
+        }
+
+        const response = await fetch(`${BASE_URL}/subscriptions/${id}/refund`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
         });
         return handleResponse(response);
     },
@@ -609,6 +651,171 @@ export const accountingAPI = {
 };
 
 // ─── Platform Admin (Super Admin) ────────────────────────────────────
+
+export const debtsAPI = {
+    // GET /api/v1/debts
+    getDebts: async (params = {}) => {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                query.append(key, value);
+            }
+        });
+
+        const response = await fetch(`${BASE_URL}/debts${query.toString() ? `?${query.toString()}` : ''}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // GET /api/v1/debts/summary
+    getSummary: async (params = {}) => {
+        const buildQueryString = (input = {}) => {
+            const query = new URLSearchParams();
+            Object.entries(input).forEach(([key, value]) => {
+                if (value !== '' && value !== null && value !== undefined) {
+                    query.append(key, value);
+                }
+            });
+            return query.toString();
+        };
+
+        // Keep date filters mutually exclusive to avoid backend validation conflicts.
+        const normalizedParams = { ...params };
+        if (normalizedParams.date) {
+            delete normalizedParams.startDate;
+            delete normalizedParams.endDate;
+            delete normalizedParams.dateFrom;
+            delete normalizedParams.dateTo;
+        } else {
+            if (normalizedParams.startDate && !normalizedParams.endDate) {
+                normalizedParams.endDate = normalizedParams.startDate;
+            }
+            if (normalizedParams.endDate && !normalizedParams.startDate) {
+                normalizedParams.startDate = normalizedParams.endDate;
+            }
+        }
+
+        const buildSummaryUrl = (queryString) => `${BASE_URL}/debts/summary${queryString ? `?${queryString}` : ''}`;
+
+        const hasRange = !normalizedParams.date && normalizedParams.startDate && normalizedParams.endDate;
+        const isSingleDayRange = hasRange && normalizedParams.startDate === normalizedParams.endDate;
+
+        const candidateParamsList = [];
+        candidateParamsList.push(normalizedParams);
+
+        if (hasRange) {
+            // Try backend-alternative naming
+            candidateParamsList.push({
+                dateFrom: normalizedParams.startDate,
+                dateTo: normalizedParams.endDate
+            });
+        }
+
+        if (isSingleDayRange) {
+            // Try single-date variant for one day
+            candidateParamsList.push({ date: normalizedParams.startDate });
+        }
+
+        // Last fallback: unfiltered summary, so cards don't stay empty on server date-filter bugs.
+        candidateParamsList.push({});
+
+        const attempted = new Set();
+        let lastResponse = null;
+
+        for (const candidate of candidateParamsList) {
+            const key = JSON.stringify(candidate);
+            if (attempted.has(key)) continue;
+            attempted.add(key);
+
+            const queryString = buildQueryString(candidate);
+            const response = await fetch(buildSummaryUrl(queryString), {
+                headers: { ...getAuthHeader() }
+            });
+
+            lastResponse = response;
+            if (response.ok) {
+                return handleResponse(response);
+            }
+
+            // Retry only for server errors. For 4xx, return immediately to preserve validation feedback.
+            if (response.status < 500) {
+                return handleResponse(response);
+            }
+        }
+
+        return handleResponse(lastResponse);
+    },
+
+    // GET /api/v1/debts/:id
+    getDebt: async (id) => {
+        const response = await fetch(`${BASE_URL}/debts/${id}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // POST /api/v1/debts
+    createDebt: async (data) => {
+        const payload = {
+            ...data,
+            amountCents: toCents(data.amount)
+        };
+        delete payload.amount;
+
+        const response = await fetch(`${BASE_URL}/debts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
+    // POST /api/v1/debts/:id/payments
+    addPayment: async (id, data) => {
+        const payload = {
+            ...data,
+            amountCents: toCents(data.amount)
+        };
+        delete payload.amount;
+
+        const response = await fetch(`${BASE_URL}/debts/${id}/payments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
+    // GET /api/v1/debts/member/:memberId
+    getMemberDebts: async (memberId, params = {}) => {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                query.append(key, value);
+            }
+        });
+
+        const response = await fetch(`${BASE_URL}/debts/member/${memberId}${query.toString() ? `?${query.toString()}` : ''}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // GET /api/v1/debts/member/:memberId/summary
+    getMemberSummary: async (memberId) => {
+        const response = await fetch(`${BASE_URL}/debts/member/${memberId}/summary`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    }
+};
 
 const getAdminAuthHeader = () => {
     const token = localStorage.getItem('admin_token');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, RefreshCw, Snowflake, XCircle, Clock, CheckCircle, PauseCircle, AlertTriangle } from 'lucide-react';
+import { X, RefreshCw, Snowflake, XCircle, Clock, CheckCircle, PauseCircle, AlertTriangle, RotateCcw } from 'lucide-react';
 import { subscriptionsAPI } from '../utils/api';
 
 // Mock history data for development
@@ -9,7 +9,7 @@ const MOCK_HISTORY = [
     { id: 'h3', event: 'Subscription Unfrozen', createdAt: '2026-02-20', eventType: 'active' },
 ];
 
-const SubscriptionDetailsModal = ({ isOpen, onClose, subscription, onRenew, onFreeze, onCancel, onDeduct }) => {
+const SubscriptionDetailsModal = ({ isOpen, onClose, subscription, onRenew, onFreeze, onCancel, onRefund, onDeduct }) => {
     const [history, setHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -96,6 +96,12 @@ const SubscriptionDetailsModal = ({ isOpen, onClose, subscription, onRenew, onFr
                             <span className="detail-label">Price</span>
                             <span className="detail-value" style={{ color: 'var(--accent-neon)' }}>
                                 {Number(sub.pricePaid || (sub.plan ? sub.plan.price : 0)).toLocaleString('en-EG')} EGP
+                            </span>
+                        </div>
+                        <div className="detail-row">
+                            <span className="detail-label">Total Price</span>
+                            <span className="detail-value">
+                                {Number(sub.totalPrice || sub.plan?.price || sub.pricePaid || 0).toLocaleString('en-EG')} EGP
                             </span>
                         </div>
                         <div className="detail-row">
@@ -188,6 +194,11 @@ const SubscriptionDetailsModal = ({ isOpen, onClose, subscription, onRenew, onFr
                         {(sub.status === 'active' || sub.status === 'frozen') && (
                             <button className="quick-action-btn cancel" onClick={onCancel}>
                                 <XCircle size={14} /> Cancel
+                            </button>
+                        )}
+                        {(sub.status === 'active' || sub.status === 'frozen') && onRefund && (
+                            <button className="quick-action-btn" onClick={onRefund} style={{ color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.3)', background: 'rgba(251, 191, 36, 0.05)' }}>
+                                <RotateCcw size={14} /> Refund
                             </button>
                         )}
                     </div>

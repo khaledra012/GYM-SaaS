@@ -105,6 +105,12 @@ const Sidebar = () => {
                         >
                             Shifts Archive
                         </NavLink>
+                        <NavLink
+                            to="/accounting/debts"
+                            className={({ isActive }) => `nav-submenu-link ${isActive ? 'active' : ''}`}
+                        >
+                            Debts
+                        </NavLink>
                     </div>
                 </div>
             </nav>

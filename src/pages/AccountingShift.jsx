@@ -3,10 +3,44 @@ import { Wallet, TrendingUp, TrendingDown, DollarSign, LogIn, LogOut, Activity }
 import DashboardLayout from '../components/DashboardLayout';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { accountingAPI } from '../utils/api';
+import { accountingAPI, debtsAPI } from '../utils/api';
+
+const EMPTY_DEBTS_SUMMARY = {
+    totalOriginalAmountCents: 0,
+    totalOriginalAmount: 0,
+    totalRemainingAmountCents: 0,
+    totalRemainingAmount: 0,
+    membersWithOutstandingDebtsCount: 0,
+    outstandingDebtsCount: 0
+};
+
+const extractDebtsSummaryPayload = (payload) => {
+    if (!payload) return null;
+    if (payload?.data?.data) return payload.data.data;
+    if (payload?.data && !Array.isArray(payload.data)) return payload.data;
+    return payload;
+};
+
+const readAmount = (summary, amountKey, centsKey) => {
+    if (!summary) return 0;
+    if (summary[amountKey] !== undefined && summary[amountKey] !== null) return summary[amountKey];
+    if (summary[centsKey] !== undefined && summary[centsKey] !== null) return Number(summary[centsKey]) / 100;
+    return 0;
+};
+
+const buildDebtsSummaryParams = (filterMode, dateSingle, dateRange) => {
+    if (filterMode === 'single' && dateSingle) {
+        return { startDate: dateSingle, endDate: dateSingle };
+    }
+    if (filterMode === 'range' && dateRange.startDate && dateRange.endDate) {
+        return { startDate: dateRange.startDate, endDate: dateRange.endDate };
+    }
+    return {};
+};
 
 const AccountingShift = () => {
     const [summaryData, setSummaryData] = useState(null);
+    const [debtsSummary, setDebtsSummary] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,15 +66,32 @@ const AccountingShift = () => {
                 params.startDate = dateRange.startDate;
                 params.endDate = dateRange.endDate;
             }
+            const debtsSummaryParams = buildDebtsSummaryParams(filterMode, dateSingle, dateRange);
 
-            const res = await accountingAPI.getDashboardSummary(params);
-            // The API wrapper usually returns the `data` payload if it follows standard formatting
-            // Depending on how `handleResponse` is written, it might return { status, data: { ... } } or just the inner data.
-            const dataToSet = res.data || res;
-            setSummaryData(dataToSet);
+            const [dashboardResult, debtsResult] = await Promise.allSettled([
+                accountingAPI.getDashboardSummary(params),
+                debtsAPI.getSummary(debtsSummaryParams)
+            ]);
+
+            if (dashboardResult.status === 'fulfilled') {
+                const dashboardData = dashboardResult.value?.data || dashboardResult.value;
+                setSummaryData(dashboardData);
+            } else {
+                console.error('Failed to fetch accounting summary:', dashboardResult.reason);
+                setSummaryData(null);
+            }
+
+            if (debtsResult.status === 'fulfilled') {
+                setDebtsSummary(extractDebtsSummaryPayload(debtsResult.value));
+            } else {
+                console.error('Failed to fetch debts summary:', debtsResult.reason);
+                setDebtsSummary(null);
+            }
         } catch (error) {
             console.error('Failed to fetch accounting summary:', error);
             // Don't show an alert here necessarily, just show empty state
+            setSummaryData(null);
+            setDebtsSummary(null);
         } finally {
             setIsLoading(false);
         }
@@ -92,6 +143,10 @@ const AccountingShift = () => {
         if (val === null || val === undefined) return '0.00';
         return Number(val).toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
+
+    const visibleDebtsSummary = debtsSummary || summaryData?.debtsSummary || EMPTY_DEBTS_SUMMARY;
+    const totalDebtPortfolio = readAmount(visibleDebtsSummary, 'totalOriginalAmount', 'totalOriginalAmountCents');
+    const totalOutstandingDebt = readAmount(visibleDebtsSummary, 'totalRemainingAmount', 'totalRemainingAmountCents');
 
     return (
         <DashboardLayout>
@@ -201,6 +256,36 @@ const AccountingShift = () => {
                             <p className="stat-value">
                                 {summaryData?.currentDrawerCash !== null ? parseDecimal(summaryData?.currentDrawerCash) : '—'} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span>
                             </p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#fbbf24', background: 'rgba(251, 191, 36, 0.12)' }}>
+                                <Wallet size={24} />
+                            </div>
+                            <h3 className="stat-label">Debt Portfolio</h3>
+                            <p className="stat-value">{parseDecimal(totalDebtPortfolio)} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span></p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#f87171', background: 'rgba(248, 113, 113, 0.12)' }}>
+                                <Wallet size={24} />
+                            </div>
+                            <h3 className="stat-label">Outstanding Debts</h3>
+                            <p className="stat-value" style={{ color: '#fca5a5' }}>
+                                {parseDecimal(totalOutstandingDebt)} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>EGP</span>
+                            </p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: 'var(--accent-neon)', background: 'var(--accent-neon-light)' }}>
+                                <Wallet size={24} />
+                            </div>
+                            <h3 className="stat-label">Outstanding Members</h3>
+                            <p className="stat-value">{visibleDebtsSummary.membersWithOutstandingDebtsCount || 0}</p>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper" style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)' }}>
+                                <Wallet size={24} />
+                            </div>
+                            <h3 className="stat-label">Open Debt Records</h3>
+                            <p className="stat-value">{visibleDebtsSummary.outstandingDebtsCount || 0}</p>
                         </div>
                     </div>
 

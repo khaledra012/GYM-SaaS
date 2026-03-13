@@ -4,6 +4,13 @@ import Input from './Input';
 import Button from './Button';
 import { membersAPI, plansAPI } from '../utils/api';
 
+const extractMemberRows = (response) => {
+    if (Array.isArray(response?.data?.members)) return response.data.members;
+    if (Array.isArray(response?.members)) return response.members;
+    if (Array.isArray(response?.data?.data?.members)) return response.data.data.members;
+    return [];
+};
+
 const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
     const [formData, setFormData] = useState({
         memberId: '',
@@ -14,6 +21,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
         totalSessions: '', // for manual session_based
         startDate: new Date().toISOString().split('T')[0],
         pricePaid: '',
+        totalPrice: '',
         notes: ''
     });
 
@@ -29,6 +37,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
     const [plans, setPlans] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [loadingData, setLoadingData] = useState(false);
+    const [loadError, setLoadError] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -41,6 +50,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                 totalSessions: '',
                 startDate: new Date().toISOString().split('T')[0],
                 pricePaid: '',
+                totalPrice: '',
                 notes: ''
             });
             setIsNewMember(false);
@@ -51,6 +61,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                 status: 'active'
             });
             setSelectedPlan(null);
+            setLoadError('');
             loadDropdownData();
         }
     }, [isOpen]);
@@ -59,29 +70,21 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
         setLoadingData(true);
         try {
             const [membersData, plansData] = await Promise.all([
-                membersAPI.getMembers(),
+                membersAPI.getMembers({ page: 1, limit: 200 }),
                 plansAPI.getPlans()
             ]);
-            setMembers(membersData.members || []);
+            setMembers(extractMemberRows(membersData));
             const plansList = Array.isArray(plansData.data) ? plansData.data
                 : Array.isArray(plansData.plans) ? plansData.plans
                     : Array.isArray(plansData) ? plansData
                         : [];
             setPlans(plansList);
+            setLoadError('');
         } catch (error) {
-            // Mock data for development
-            setMembers([
-                { id: 'm1', name: 'Mostafa Ahmed', phone: '01012345678', code: '482910' },
-                { id: 'm2', name: 'Sara Kamel', phone: '01298765432', code: '573821' },
-                { id: 'm3', name: 'Khaled Omar', phone: '01155443322', code: '619047' },
-                { id: 'm4', name: 'Rana Samy', phone: '01065449871', code: '748302' },
-            ]);
-            setPlans([
-                { id: 'p1', name: 'Monthly Premium', type: 'time_based', price: 500, durationInDays: 30 },
-                { id: 'p2', name: 'Quarterly Basic', type: 'time_based', price: 1200, durationInDays: 90 },
-                { id: 'p3', name: '12 Sessions Pack', type: 'session_based', price: 600, sessionCount: 12 },
-                { id: 'p4', name: 'Annual VIP', type: 'time_based', price: 4000, durationInDays: 365 },
-            ]);
+            console.error('Failed to load subscription modal data:', error);
+            setMembers([]);
+            setPlans([]);
+            setLoadError(error.message || 'Failed to load members or plans.');
         } finally {
             setLoadingData(false);
         }
@@ -95,7 +98,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
             const plan = plans.find(p => p.id.toString() === value);
             setSelectedPlan(plan || null);
             if (plan && plan.price) {
-                setFormData(prev => ({ ...prev, pricePaid: plan.price }));
+                setFormData(prev => ({ ...prev, pricePaid: plan.price, totalPrice: plan.price }));
             }
         }
     };
@@ -198,11 +201,11 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                     value={formData.memberId}
                                     onChange={handleChange}
                                     required={!isNewMember}
-                                    disabled={loadingData}
+                                    disabled={loadingData || members.length === 0}
                                     style={{ paddingLeft: '1rem' }}
                                 >
                                     <option value="">
-                                        {loadingData ? 'Loading members...' : 'Select a member'}
+                                        {loadingData ? 'Loading members...' : members.length === 0 ? 'No members available' : 'Select a member'}
                                     </option>
                                     {members.map(m => (
                                         <option key={m.id} value={m.id}>
@@ -210,6 +213,11 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                         </option>
                                     ))}
                                 </select>
+                                {!loadingData && members.length === 0 ? (
+                                    <p style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                        {loadError || 'No members were returned from the backend.'}
+                                    </p>
+                                ) : null}
                             </div>
                         ) : (
                             /* New Member Fields */
@@ -260,7 +268,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                         fontWeight: formData.source === 'plan' ? '600' : '400',
                                         cursor: 'pointer', transition: 'all 0.2s'
                                     }}
-                                    onClick={() => setFormData(p => ({ ...p, source: 'plan', pricePaid: selectedPlan?.price || '' }))}
+                                    onClick={() => setFormData(p => ({ ...p, source: 'plan', pricePaid: selectedPlan?.price || '', totalPrice: selectedPlan?.price || '' }))}
                                 >
                                     From Plan
                                 </button>
@@ -273,7 +281,7 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                         fontWeight: formData.source === 'manual' ? '600' : '400',
                                         cursor: 'pointer', transition: 'all 0.2s'
                                     }}
-                                    onClick={() => setFormData(p => ({ ...p, source: 'manual', pricePaid: '' }))}
+                                    onClick={() => setFormData(p => ({ ...p, source: 'manual', pricePaid: '', totalPrice: '' }))}
                                 >
                                     Manual Entry
                                 </button>
@@ -290,11 +298,11 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                     value={formData.planId}
                                     onChange={handleChange}
                                     required={formData.source === 'plan'}
-                                    disabled={loadingData}
+                                    disabled={loadingData || plans.length === 0}
                                     style={{ paddingLeft: '1rem' }}
                                 >
                                     <option value="">
-                                        {loadingData ? 'Loading plans...' : 'Select a plan'}
+                                        {loadingData ? 'Loading plans...' : plans.length === 0 ? 'No plans available' : 'Select a plan'}
                                     </option>
                                     {plans.map(p => (
                                         <option key={p.id} value={p.id}>
@@ -302,6 +310,11 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                                         </option>
                                     ))}
                                 </select>
+                                {!loadingData && plans.length === 0 ? (
+                                    <p style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                        {loadError || 'No plans were returned from the backend.'}
+                                    </p>
+                                ) : null}
                             </div>
                         ) : (
                             /* Manual Entry Fields */
@@ -366,6 +379,18 @@ const SubscriptionModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
                             onChange={handleChange}
                             required
                         />
+
+                        <Input
+                            label="Total Price (EGP)"
+                            name="totalPrice"
+                            type="number"
+                            min="0"
+                            value={formData.totalPrice}
+                            onChange={handleChange}
+                        />
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                            If total price is higher than paid amount, a debt record will be created automatically.
+                        </p>
 
                         {/* Notes */}
                         <Input

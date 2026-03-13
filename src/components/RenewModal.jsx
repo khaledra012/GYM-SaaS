@@ -7,15 +7,19 @@ const RenewModal = ({ isOpen, onClose, onSubmit, subscription, isLoading }) => {
     const [formData, setFormData] = useState({
         extraDays: '',
         extraSessions: '',
-        pricePaid: ''
+        pricePaid: '',
+        totalPrice: ''
     });
+
+    const subscriptionType = subscription?.plan?.type || subscription?.type;
 
     useEffect(() => {
         if (isOpen && subscription) {
             setFormData({
                 extraDays: '',
                 extraSessions: '',
-                pricePaid: ''
+                pricePaid: '',
+                totalPrice: subscription?.plan?.price || subscription?.totalPrice || subscription?.pricePaid || ''
             });
         }
     }, [isOpen, subscription]);
@@ -40,9 +44,13 @@ const RenewModal = ({ isOpen, onClose, onSubmit, subscription, isLoading }) => {
             pricePaid: Number(formData.pricePaid)
         };
 
-        if (subscription.plan?.type === 'time_based') {
+        if (formData.totalPrice !== '') {
+            payload.totalPrice = Number(formData.totalPrice);
+        }
+
+        if (subscriptionType === 'time_based') {
             payload.extraDays = Number(formData.extraDays);
-        } else if (subscription.plan?.type === 'session_based') {
+        } else if (subscriptionType === 'session_based') {
             payload.extraSessions = Number(formData.extraSessions);
         }
 
@@ -51,7 +59,7 @@ const RenewModal = ({ isOpen, onClose, onSubmit, subscription, isLoading }) => {
 
     if (!isOpen || !subscription) return null;
 
-    const isTimeBased = subscription.plan?.type === 'time_based';
+    const isTimeBased = subscriptionType === 'time_based';
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -126,6 +134,18 @@ const RenewModal = ({ isOpen, onClose, onSubmit, subscription, isLoading }) => {
                             onChange={handleChange}
                             required
                         />
+
+                        <Input
+                            label="Total Price (EGP)"
+                            name="totalPrice"
+                            type="number"
+                            min="0"
+                            value={formData.totalPrice}
+                            onChange={handleChange}
+                        />
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                            If total price is higher than paid amount, the remaining balance will be added as a debt.
+                        </p>
                     </div>
 
                     <div className="modal-footer">

@@ -13,6 +13,7 @@ import TodayLog from './pages/TodayLog';
 import AccountingShift from './pages/AccountingShift';
 import AccountingLedger from './pages/AccountingLedger';
 import AccountingHistory from './pages/AccountingHistory';
+import AccountingDebts from './pages/AccountingDebts';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SupportFooter from './components/SupportFooter';
@@ -140,6 +141,14 @@ const AppContent = () => {
           element={
             <PrivateRoute>
               <AccountingHistory />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/accounting/debts"
+          element={
+            <PrivateRoute>
+              <AccountingDebts />
             </PrivateRoute>
           }
         />

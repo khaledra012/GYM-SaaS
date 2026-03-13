@@ -5,6 +5,13 @@ import MemberModal from '../components/MemberModal';
 import Button from '../components/Button';
 import { membersAPI } from '../utils/api';
 
+const extractMemberRows = (response) => {
+    if (Array.isArray(response?.data?.members)) return response.data.members;
+    if (Array.isArray(response?.members)) return response.members;
+    if (Array.isArray(response?.data?.data?.members)) return response.data.data.members;
+    return [];
+};
+
 const Members = () => {
     const [members, setMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -44,16 +51,10 @@ const Members = () => {
             if (subscriptionTypeFilter !== 'all') params.subscriptionType = subscriptionTypeFilter;
 
             const data = await membersAPI.getMembers(params);
-            setMembers(data.members || []);
+            setMembers(extractMemberRows(data));
         } catch (error) {
             console.error('Failed to fetch members:', error);
-            // Mock data for development
-            setMembers([
-                { id: '1', code: '482910', barcodeValue: '482910', name: 'Mostafa Ahmed', phone: '01012345678', gender: 'male', subscriptionStatus: 'active', subscriptionType: 'time_based', subscriptionEndDate: '2026-04-15' },
-                { id: '2', code: '573821', barcodeValue: '573821', name: 'Sara Kamel', phone: '01298765432', gender: 'female', subscriptionStatus: 'active', subscriptionType: 'session_based', subscriptionEndDate: '2026-03-20' },
-                { id: '3', code: '619047', barcodeValue: '619047', name: 'Khaled Omar', phone: '01155443322', gender: 'male', subscriptionStatus: 'expired', subscriptionType: 'time_based', subscriptionEndDate: '2025-12-10' },
-                { id: '4', code: '748302', barcodeValue: '748302', name: 'Rana Samy', phone: '01065449871', gender: 'female', subscriptionStatus: null, subscriptionType: null, subscriptionEndDate: null },
-            ]);
+            setMembers([]);
         } finally {
             setIsLoading(false);
         }

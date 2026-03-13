@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, RefreshCw, Snowflake, XCircle, Filter } from 'lucide-react';
+import { Search, Plus, Eye, RefreshCw, Snowflake, XCircle, Filter, RotateCcw } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import SubscriptionModal from '../components/SubscriptionModal';
 import SubscriptionDetailsModal from '../components/SubscriptionDetailsModal';
 import RenewModal from '../components/RenewModal';
 import RenewExpiredModal from '../components/RenewExpiredModal';
 import DeductModal from '../components/DeductModal';
+import SubscriptionRefundModal from '../components/SubscriptionRefundModal';
 import Button from '../components/Button';
-import { subscriptionsAPI, membersAPI } from '../utils/api';
+import { subscriptionsAPI, membersAPI, accountingAPI } from '../utils/api';
 
 const TABS = [
     { key: 'all', label: 'All' },
@@ -30,12 +31,14 @@ const Subscriptions = () => {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [hasOpenShift, setHasOpenShift] = useState(false);
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
     const [isRenewExpiredModalOpen, setIsRenewExpiredModalOpen] = useState(false);
     const [isDeductModalOpen, setIsDeductModalOpen] = useState(false);
+    const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
     const [selectedSubscription, setSelectedSubscription] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,6 +52,9 @@ const Subscriptions = () => {
             const params = { limit: 100, page: currentPage }; // Fetch up to 100 per page to satisfy limits
             if (searchTerm) params.search = searchTerm;
             // No longer filtering by activeTab on the server so we can get all counts correctly
+
+            const shiftData = await accountingAPI.getCurrentShift().catch(() => null);
+            setHasOpenShift(Boolean(shiftData?.data || shiftData));
 
             const data = await subscriptionsAPI.getSubscriptions(params);
 
@@ -166,6 +172,11 @@ const Subscriptions = () => {
         }
     };
 
+    const handleRefund = (sub) => {
+        setSelectedSubscription(sub);
+        setIsRefundModalOpen(true);
+    };
+
     const handleCreateSubmit = async (payload) => {
         setIsSubmitting(true);
         try {
@@ -258,6 +269,24 @@ const Subscriptions = () => {
             } else {
                 alert(error.message || 'فشل خصم الجلسات');
             }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRefundSubmit = async (formData) => {
+        setIsSubmitting(true);
+        try {
+            const shiftData = await accountingAPI.getCurrentShift().catch(() => null);
+            if (!shiftData?.data && !shiftData) {
+                throw new Error('Open a shift first before creating a refund.');
+            }
+
+            await subscriptionsAPI.refundSubscription(selectedSubscription.id, formData);
+            setIsRefundModalOpen(false);
+            fetchSubscriptions();
+        } catch (error) {
+            alert(error.message || 'Failed to refund subscription.');
         } finally {
             setIsSubmitting(false);
         }
@@ -507,6 +536,11 @@ const Subscriptions = () => {
                                                         </button>
                                                     )}
                                                     {(sub.status === 'active' || sub.status === 'frozen') && (
+                                                        <button className="btn-icon" title="Refund" onClick={() => handleRefund(sub)} style={{ color: '#fbbf24' }}>
+                                                            <RotateCcw size={16} />
+                                                        </button>
+                                                    )}
+                                                    {(sub.status === 'active' || sub.status === 'frozen') && (
                                                         <button className="btn-icon freeze" title={sub.status === 'frozen' ? 'Unfreeze' : 'Freeze'} onClick={() => handleFreeze(sub)}>
                                                             <Snowflake size={16} />
                                                         </button>
@@ -571,6 +605,7 @@ const Subscriptions = () => {
                         onRenew={() => { setIsDetailsModalOpen(false); handleRenew(selectedSubscription); }}
                         onFreeze={() => { setIsDetailsModalOpen(false); handleFreeze(selectedSubscription); }}
                         onCancel={() => { setIsDetailsModalOpen(false); handleCancel(selectedSubscription); }}
+                        onRefund={() => { setIsDetailsModalOpen(false); handleRefund(selectedSubscription); }}
                         onDeduct={() => { setIsDetailsModalOpen(false); handleDeduct(selectedSubscription); }}
                     />
 
@@ -596,6 +631,15 @@ const Subscriptions = () => {
                         onSubmit={handleDeductSubmit}
                         subscription={selectedSubscription}
                         isLoading={isSubmitting}
+                    />
+
+                    <SubscriptionRefundModal
+                        isOpen={isRefundModalOpen}
+                        onClose={() => setIsRefundModalOpen(false)}
+                        onSubmit={handleRefundSubmit}
+                        subscription={selectedSubscription}
+                        isLoading={isSubmitting}
+                        isShiftOpen={hasOpenShift}
                     />
                 </>
             )}

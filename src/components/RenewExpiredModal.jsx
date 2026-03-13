@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import Input from './Input';
 import Button from './Button';
@@ -12,38 +12,36 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
         durationInDays: '',
         totalSessions: '',
         pricePaid: '',
+        totalPrice: '',
         startDate: '',
         notes: ''
     });
-
     const [plans, setPlans] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [loadingPlans, setLoadingPlans] = useState(false);
 
     useEffect(() => {
-        if (isOpen && subscription) {
-            // Check if same_plan is viable initially
-            const canUseSamePlan = subscription.source === 'plan' && subscription.plan?.id;
+        if (!isOpen || !subscription) return;
 
-            setFormData({
-                mode: canUseSamePlan ? 'same_plan' : 'new_plan',
-                planId: '',
-                type: 'time_based',
-                durationInDays: '',
-                totalSessions: '',
-                pricePaid: '',
-                startDate: '',
-                notes: ''
-            });
-            setSelectedPlan(null);
+        const canUseSamePlan = subscription.source === 'plan' && subscription.plan?.id;
+        setFormData({
+            mode: canUseSamePlan ? 'same_plan' : 'new_plan',
+            planId: '',
+            type: 'time_based',
+            durationInDays: '',
+            totalSessions: '',
+            pricePaid: '',
+            totalPrice: canUseSamePlan ? (subscription.plan?.price || '') : '',
+            startDate: '',
+            notes: ''
+        });
+        setSelectedPlan(null);
 
-            if (!canUseSamePlan && plans.length === 0) {
-                loadPlans();
-            }
+        if (!canUseSamePlan && plans.length === 0) {
+            loadPlans();
         }
     }, [isOpen, subscription]);
 
-    // Load plans if user switches to new_plan or if same_plan isn't viable and plans aren't loaded
     useEffect(() => {
         if (isOpen && formData.mode === 'new_plan' && plans.length === 0) {
             loadPlans();
@@ -54,41 +52,78 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
         setLoadingPlans(true);
         try {
             const plansData = await plansAPI.getPlans();
-            const plansList = Array.isArray(plansData.data) ? plansData.data
-                : Array.isArray(plansData.plans) ? plansData.plans
-                    : Array.isArray(plansData) ? plansData
+            const plansList = Array.isArray(plansData.data)
+                ? plansData.data
+                : Array.isArray(plansData.plans)
+                    ? plansData.plans
+                    : Array.isArray(plansData)
+                        ? plansData
                         : [];
             setPlans(plansList);
         } catch (error) {
             console.error('Failed to load plans', error);
+            setPlans([]);
         } finally {
             setLoadingPlans(false);
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
 
         if (name === 'planId') {
-            const plan = plans.find(p => p.id.toString() === value);
+            const plan = plans.find((item) => item.id.toString() === value);
             setSelectedPlan(plan || null);
             if (plan && plan.price) {
-                setFormData(prev => ({ ...prev, pricePaid: plan.price }));
+                setFormData((prev) => ({ ...prev, pricePaid: plan.price, totalPrice: plan.price }));
             }
         }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        if (Number(formData.pricePaid) < 0) {
-            alert('السعر المدفوع لا يمكن أن يكون سالباً');
+    const switchMode = (mode) => {
+        if (mode === 'same_plan') {
+            setFormData((prev) => ({
+                ...prev,
+                mode,
+                planId: '',
+                pricePaid: '',
+                totalPrice: subscription?.plan?.price || ''
+            }));
             return;
         }
 
-        const payload = { ...formData };
-        onSubmit(payload);
+        if (mode === 'new_plan') {
+            setFormData((prev) => ({
+                ...prev,
+                mode,
+                type: 'time_based',
+                durationInDays: '',
+                totalSessions: '',
+                pricePaid: selectedPlan?.price || '',
+                totalPrice: selectedPlan?.price || ''
+            }));
+            return;
+        }
+
+        setFormData((prev) => ({
+            ...prev,
+            mode: 'manual',
+            planId: '',
+            pricePaid: '',
+            totalPrice: ''
+        }));
+    };
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+
+        if (Number(formData.pricePaid) < 0) {
+            alert('Paid amount cannot be negative.');
+            return;
+        }
+
+        onSubmit({ ...formData });
     };
 
     if (!isOpen || !subscription) return null;
@@ -97,88 +132,96 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content" onClick={(event) => event.stopPropagation()}>
                 <div className="modal-header">
-                    <h2 className="section-title">إعادة تجديد اشتراك منتهي</h2>
-                    <button className="close-btn" onClick={onClose}>
+                    <h2 className="section-title">Renew Expired Subscription</h2>
+                    <button className="close-btn" onClick={onClose} type="button">
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Current subscription summary */}
                 <div className="detail-card">
-                    <h3 className="detail-section-title">بيانات الاشتراك المنتهي</h3>
-                    <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                        {subscription.member?.name}
-                    </div>
+                    <h3 className="detail-section-title">Expired Subscription</h3>
+                    <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{subscription.member?.name}</div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {subscription.source === 'plan' ? subscription.plan?.name : 'اشتراك يدوي'}
-                        {' '}· تم الانتهاء في {' '}
-                        {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString() : '—'}
+                        {subscription.source === 'plan' ? subscription.plan?.name : 'Manual subscription'}
+                        {' '}· expired on{' '}
+                        {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString() : '-'}
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="modal-body">
-                        {/* Mode Selection */}
                         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label className="form-label">طريقة التجديد</label>
+                            <label className="form-label">Renewal Mode</label>
                             <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', padding: '0.25rem', borderRadius: '8px' }}>
-                                {canUseSamePlan && (
+                                {canUseSamePlan ? (
                                     <button
                                         type="button"
                                         style={{
-                                            flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none',
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            borderRadius: '6px',
+                                            border: 'none',
                                             background: formData.mode === 'same_plan' ? 'var(--accent-neon)' : 'transparent',
                                             color: formData.mode === 'same_plan' ? '#000' : 'var(--text-muted)',
                                             fontWeight: formData.mode === 'same_plan' ? '600' : '400',
-                                            cursor: 'pointer', transition: 'all 0.2s'
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
                                         }}
-                                        onClick={() => setFormData(p => ({ ...p, mode: 'same_plan', pricePaid: '' }))}
+                                        onClick={() => switchMode('same_plan')}
                                     >
-                                        نفس الباقة السابقة
+                                        Same Plan
                                     </button>
-                                )}
+                                ) : null}
                                 <button
                                     type="button"
                                     style={{
-                                        flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none',
+                                        flex: 1,
+                                        padding: '0.5rem',
+                                        borderRadius: '6px',
+                                        border: 'none',
                                         background: formData.mode === 'new_plan' ? 'var(--accent-neon)' : 'transparent',
                                         color: formData.mode === 'new_plan' ? '#000' : 'var(--text-muted)',
                                         fontWeight: formData.mode === 'new_plan' ? '600' : '400',
-                                        cursor: 'pointer', transition: 'all 0.2s'
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                     }}
-                                    onClick={() => setFormData(p => ({ ...p, mode: 'new_plan', pricePaid: selectedPlan?.price || '' }))}
+                                    onClick={() => switchMode('new_plan')}
                                 >
-                                    باقة جديدة
+                                    New Plan
                                 </button>
                                 <button
                                     type="button"
                                     style={{
-                                        flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none',
+                                        flex: 1,
+                                        padding: '0.5rem',
+                                        borderRadius: '6px',
+                                        border: 'none',
                                         background: formData.mode === 'manual' ? 'var(--accent-neon)' : 'transparent',
                                         color: formData.mode === 'manual' ? '#000' : 'var(--text-muted)',
                                         fontWeight: formData.mode === 'manual' ? '600' : '400',
-                                        cursor: 'pointer', transition: 'all 0.2s'
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                     }}
-                                    onClick={() => setFormData(p => ({ ...p, mode: 'manual', pricePaid: '' }))}
+                                    onClick={() => switchMode('manual')}
                                 >
-                                    إدخال يدوي
+                                    Manual
                                 </button>
                             </div>
                         </div>
 
-                        {formData.mode === 'same_plan' && (
+                        {formData.mode === 'same_plan' ? (
                             <div style={{ padding: '1rem', background: 'var(--accent-neon-light)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--accent-neon-border)' }}>
                                 <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: 0 }}>
-                                    سيتم تجديد اشتراك العضو تباعًا لخصائص باقته السابقة <strong>({subscription.plan?.name})</strong>.
+                                    The subscription will be renewed using the previous plan settings.
                                 </p>
                             </div>
-                        )}
+                        ) : null}
 
-                        {formData.mode === 'new_plan' && (
+                        {formData.mode === 'new_plan' ? (
                             <div className="form-group">
-                                <label className="form-label">اختر الباقة</label>
+                                <label className="form-label">Plan</label>
                                 <select
                                     name="planId"
                                     className="form-input"
@@ -188,22 +231,20 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
                                     disabled={loadingPlans}
                                     style={{ paddingLeft: '1rem' }}
                                 >
-                                    <option value="">
-                                        {loadingPlans ? 'جاري تحميل الباقات...' : 'اختر باقة'}
-                                    </option>
-                                    {plans.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.name} — {Number(p.price).toLocaleString('en-EG')} EGP
+                                    <option value="">{loadingPlans ? 'Loading plans...' : 'Select a plan'}</option>
+                                    {plans.map((plan) => (
+                                        <option key={plan.id} value={plan.id}>
+                                            {plan.name} - {Number(plan.price).toLocaleString('en-EG')} EGP
                                         </option>
                                     ))}
                                 </select>
                             </div>
-                        )}
+                        ) : null}
 
-                        {formData.mode === 'manual' && (
+                        {formData.mode === 'manual' ? (
                             <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--card-border)' }}>
                                 <div className="form-group">
-                                    <label className="form-label">نوع الاشتراك</label>
+                                    <label className="form-label">Subscription Type</label>
                                     <select
                                         name="type"
                                         className="form-input"
@@ -211,39 +252,39 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
                                         onChange={handleChange}
                                         style={{ paddingLeft: '1rem' }}
                                     >
-                                        <option value="time_based">أيام (محدد المدة)</option>
-                                        <option value="session_based">جلسات (محدد العدد)</option>
+                                        <option value="time_based">Time Based</option>
+                                        <option value="session_based">Session Based</option>
                                     </select>
                                 </div>
 
                                 {formData.type === 'time_based' ? (
                                     <Input
-                                        label="المدة (بالأيام)"
+                                        label="Duration (Days)"
                                         name="durationInDays"
                                         type="number"
                                         min="1"
-                                        placeholder="مثال: 30"
+                                        placeholder="Example: 30"
                                         value={formData.durationInDays}
                                         onChange={handleChange}
-                                        required={formData.mode === 'manual' && formData.type === 'time_based'}
+                                        required
                                     />
                                 ) : (
                                     <Input
-                                        label="عدد الجلسات"
+                                        label="Total Sessions"
                                         name="totalSessions"
                                         type="number"
                                         min="1"
-                                        placeholder="مثال: 12"
+                                        placeholder="Example: 12"
                                         value={formData.totalSessions}
                                         onChange={handleChange}
-                                        required={formData.mode === 'manual' && formData.type === 'session_based'}
+                                        required
                                     />
                                 )}
                             </div>
-                        )}
+                        ) : null}
 
                         <Input
-                            label="تاريخ البدء (اختياري، يترك فارغاً للبدء من اليوم)"
+                            label="Start Date (optional)"
                             name="startDate"
                             type="date"
                             value={formData.startDate}
@@ -251,7 +292,7 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
                         />
 
                         <Input
-                            label="المبلغ المدفوع (EGP)"
+                            label="Paid Amount (EGP)"
                             name="pricePaid"
                             type="number"
                             min="0"
@@ -261,7 +302,19 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
                         />
 
                         <Input
-                            label="ملاحظات (اختياري)"
+                            label="Total Price (EGP)"
+                            name="totalPrice"
+                            type="number"
+                            min="0"
+                            value={formData.totalPrice}
+                            onChange={handleChange}
+                        />
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                            If total price is higher than paid amount, the remaining balance will be recorded as a debt.
+                        </p>
+
+                        <Input
+                            label="Notes (Optional)"
                             name="notes"
                             type="text"
                             value={formData.notes}
@@ -271,10 +324,10 @@ const RenewExpiredModal = ({ isOpen, onClose, onSubmit, subscription, isLoading 
 
                     <div className="modal-footer">
                         <button type="button" className="btn-text" onClick={onClose} disabled={isLoading}>
-                            إلغاء
+                            Cancel
                         </button>
                         <Button type="submit" disabled={isLoading || loadingPlans} style={{ width: 'auto' }}>
-                            {isLoading ? 'جاري التجديد...' : 'تجديد الاشتراك'}
+                            {isLoading ? 'Renewing...' : 'Renew Subscription'}
                         </Button>
                     </div>
                 </form>
