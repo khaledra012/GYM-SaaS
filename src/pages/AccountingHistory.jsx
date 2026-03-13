@@ -4,12 +4,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { accountingAPI } from '../utils/api';
+import { getTodayDateInCairo } from '../utils/date';
 
 const AccountingHistory = () => {
     const [shifts, setShifts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateInCairo();
     const [filters, setFilters] = useState({
         startDate: today,
         endDate: today,

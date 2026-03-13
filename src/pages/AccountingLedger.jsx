@@ -5,6 +5,9 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import TransactionModal, { TRANSACTION_CATEGORIES } from '../components/TransactionModal';
 import { accountingAPI } from '../utils/api';
+import { getTodayDateInCairo } from '../utils/date';
+
+const getTodayDate = () => getTodayDateInCairo();
 
 const AccountingLedger = () => {
     const [transactions, setTransactions] = useState([]);
@@ -18,8 +21,8 @@ const AccountingLedger = () => {
     // Filters
     const [filterMode, setFilterMode] = useState('single'); // 'single' or 'range'
     const [filters, setFilters] = useState({
-        date: new Date().toISOString().split('T')[0],
-        startDate: '',
+        date: getTodayDate(),
+        startDate: getTodayDate(),
         endDate: '',
         type: '',
         category: ''
@@ -120,6 +123,13 @@ const AccountingLedger = () => {
         }
     };
 
+    const sanitizeTransactionDescription = (description) => {
+        if (!description) return '-';
+        const text = String(description);
+        if (!/refund|\u0645\u0631\u062a\u062c\u0639/i.test(text)) return text;
+        return text.replace(/\s*(?:\u0631\u0642\u0645\s*)?#\s*\d+\b/gi, '').trim();
+    };
+
     return (
         <DashboardLayout>
             <div className="flex-between page-header mb-8">
@@ -143,7 +153,13 @@ const AccountingLedger = () => {
                         className="form-input"
                         value={filterMode}
                         onChange={(e) => {
-                            setFilterMode(e.target.value);
+                            const mode = e.target.value;
+                            setFilterMode(mode);
+                            if (mode === 'range') {
+                                setFilters((prev) => ({ ...prev, startDate: prev.startDate || getTodayDate() }));
+                            } else {
+                                setFilters((prev) => ({ ...prev, date: prev.date || getTodayDate() }));
+                            }
                             setPagination({ ...pagination, page: 1 });
                         }}
                         style={{ paddingLeft: '1rem', minWidth: '150px' }}
@@ -217,7 +233,7 @@ const AccountingLedger = () => {
                 <div>
                     <Button onClick={() => {
                         setFilterMode('single');
-                        setFilters({ date: '', startDate: '', endDate: '', type: '', category: '' });
+                        setFilters({ date: getTodayDate(), startDate: getTodayDate(), endDate: '', type: '', category: '' });
                         setPagination({ ...pagination, page: 1 });
                     }} style={{ width: 'auto', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
                         مسح الفلاتر
@@ -286,8 +302,8 @@ const AccountingLedger = () => {
                                                     {getSourceLabel(tx.source)}
                                                 </span>
                                             </td>
-                                            <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={tx.description}>
-                                                {tx.description || '—'}
+                                            <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={sanitizeTransactionDescription(tx.description)}>
+                                                {sanitizeTransactionDescription(tx.description)}
                                             </td>
                                         </tr>
                                     ))}
@@ -336,3 +352,4 @@ const AccountingLedger = () => {
 };
 
 export default AccountingLedger;
+

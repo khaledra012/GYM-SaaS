@@ -4,6 +4,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { accountingAPI, debtsAPI } from '../utils/api';
+import { getTodayDateInCairo } from '../utils/date';
 
 const EMPTY_DEBTS_SUMMARY = {
     totalOriginalAmountCents: 0,
@@ -38,6 +39,8 @@ const buildDebtsSummaryParams = (filterMode, dateSingle, dateRange) => {
     return {};
 };
 
+const getTodayDate = () => getTodayDateInCairo();
+
 const AccountingShift = () => {
     const [summaryData, setSummaryData] = useState(null);
     const [debtsSummary, setDebtsSummary] = useState(null);
@@ -50,11 +53,20 @@ const AccountingShift = () => {
 
     // Filter states
     const [filterMode, setFilterMode] = useState('single'); // 'single' or 'range'
-    const [dateSingle, setDateSingle] = useState(new Date().toISOString().split('T')[0]);
+    const [dateSingle, setDateSingle] = useState(getTodayDate());
     const [dateRange, setDateRange] = useState({
-        startDate: '',
+        startDate: getTodayDate(),
         endDate: ''
     });
+
+    const handleFilterModeChange = (mode) => {
+        setFilterMode(mode);
+        if (mode === 'range') {
+            setDateRange((prev) => ({ ...prev, startDate: prev.startDate || getTodayDate() }));
+            return;
+        }
+        setDateSingle((prev) => prev || getTodayDate());
+    };
 
     const fetchSummary = async () => {
         setIsLoading(true);
@@ -170,7 +182,7 @@ const AccountingShift = () => {
                     <select
                         className="form-input"
                         value={filterMode}
-                        onChange={(e) => setFilterMode(e.target.value)}
+                        onChange={(e) => handleFilterModeChange(e.target.value)}
                         style={{ paddingLeft: '1rem', minWidth: '150px' }}
                     >
                         <option value="single">يوم محدد</option>

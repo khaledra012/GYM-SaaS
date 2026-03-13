@@ -7,6 +7,7 @@ import DebtCreateModal from '../components/DebtCreateModal';
 import DebtPaymentModal from '../components/DebtPaymentModal';
 import DebtDetailsModal from '../components/DebtDetailsModal';
 import { accountingAPI, debtsAPI } from '../utils/api';
+import { getTodayDateInCairo } from '../utils/date';
 
 const extractDebtRows = (response) => {
     if (Array.isArray(response?.data?.debts)) return response.data.debts;
@@ -50,11 +51,7 @@ const resolveDebtDate = (debt) => {
 };
 
 const getTodayDate = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return getTodayDateInCairo();
 };
 
 const buildDateParams = (startDate, endDate) => {
