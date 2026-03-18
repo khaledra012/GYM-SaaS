@@ -1278,10 +1278,11 @@ body.light-mode .support-footer {
   opacity: 0.95;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .support-footer {
-    bottom: 10px;
-    padding: 0.3rem 0.6rem;
+    top: 12px;
+    bottom: auto;
+    padding: 0.35rem 0.7rem;
     font-size: 0.7rem;
   }
 }

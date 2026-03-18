@@ -25,21 +25,18 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            const data = await authAPI.login(formData.email, formData.password);
+            let data;
+            try {
+                data = await authAPI.login(formData.email, formData.password);
+            } catch (primaryError) {
+                if (primaryError?.status === 401) {
+                    data = await authAPI.staffLogin(formData.email, formData.password);
+                } else {
+                    throw primaryError;
+                }
+            }
+
             console.log('Login successful', data);
-
-            // Backend returns: { status, message, data: { token, center: { id, name } } }
-            const token = data.data?.token || data.token;
-            if (token) {
-                localStorage.setItem('token', token);
-            }
-
-            // Extract center/gym name from the nested response
-            const gymName = data.data?.center?.name || data.data?.centerName || data.centerName || data.gym?.name;
-            if (gymName) {
-                localStorage.setItem('gymName', gymName);
-            }
-
             // Navigate to dashboard
             navigate('/dashboard');
         } catch (err) {

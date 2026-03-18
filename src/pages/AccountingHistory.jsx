@@ -136,13 +136,15 @@ const AccountingHistory = () => {
                         <>
                             <table className="data-table">
                                 <thead>
-                                    <tr>
-                                        <th>رقم الوردية</th>
-                                        <th>التاريخ</th>
-                                        <th>الحالة</th>
-                                        <th>وقت الفتح</th>
-                                        <th>وقت الإغلاق</th>
-                                        <th>عهدة البداية</th>
+	                                    <tr>
+	                                        <th>رقم الوردية</th>
+	                                        <th>التاريخ</th>
+	                                        <th>الحالة</th>
+	                                        <th>Opened By</th>
+	                                        <th>Closed By</th>
+	                                        <th>وقت الفتح</th>
+	                                        <th>وقت الإغلاق</th>
+	                                        <th>عهدة البداية</th>
                                         <th>المتوقع</th>
                                         <th>الفعلي</th>
                                         <th>العجز/الزيادة</th>
@@ -150,12 +152,14 @@ const AccountingHistory = () => {
                                 </thead>
                                 <tbody>
                                     {shifts.map((shift) => (
-                                        <tr key={shift.id}>
-                                            <td style={{ color: 'var(--text-muted)' }}>#{shift.displayNumber || shift.id}</td>
-                                            <td>{shift.localDate || new Date(shift.openedAt).toLocaleDateString()}</td>
-                                            <td>{getStatusBadge(shift.status)}</td>
-                                            <td>{new Date(shift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                            <td>{shift.closedAt ? new Date(shift.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+	                                        <tr key={shift.id}>
+	                                            <td style={{ color: 'var(--text-muted)' }}>#{shift.displayNumber || shift.id}</td>
+	                                            <td>{shift.localDate || new Date(shift.openedAt).toLocaleDateString()}</td>
+	                                            <td>{getStatusBadge(shift.status)}</td>
+	                                            <td>{shift.openedByName || 'Center Owner'}</td>
+	                                            <td>{shift.closedByName || (shift.status === 'open' ? '—' : 'Center Owner')}</td>
+	                                            <td>{new Date(shift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+	                                            <td>{shift.closedAt ? new Date(shift.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                                             <td>{parseDecimal(shift.startingCash)}</td>
                                             <td style={{ color: '#38bdf8' }}>{shift.expectedEndingCash ? parseDecimal(shift.expectedEndingCash) : '—'}</td>
                                             <td style={{ fontWeight: 'bold' }}>{shift.actualEndingCash ? parseDecimal(shift.actualEndingCash) : '—'}</td>

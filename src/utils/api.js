@@ -5,6 +5,57 @@ const getAuthHeader = () => {
     return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+const persistActor = (actor) => {
+    if (!actor) return;
+    localStorage.setItem('actor', JSON.stringify({
+        type: actor.type,
+        role: actor.role
+    }));
+};
+
+const persistCenterBasics = (data) => {
+    const center = data.data?.center || data.center;
+    if (center?.name) {
+        localStorage.setItem('gymName', center.name);
+    } else {
+        const centerName = data.data?.centerName || data.centerName;
+        if (centerName) localStorage.setItem('gymName', centerName);
+    }
+
+    if (!center) return;
+    if (center.billingStatus) localStorage.setItem('billingStatus', center.billingStatus);
+
+    if (center.trialDaysLeft !== undefined && center.trialDaysLeft !== null) {
+        localStorage.setItem('trialDaysLeft', center.trialDaysLeft);
+    } else if (center.trialEndsAt) {
+        const tDaysLeft = Math.ceil((new Date(center.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
+        localStorage.setItem('trialDaysLeft', Math.max(0, tDaysLeft));
+    }
+
+    if (center.subscriptionDaysLeft !== undefined && center.subscriptionDaysLeft !== null) {
+        localStorage.setItem('subscriptionDaysLeft', center.subscriptionDaysLeft);
+    } else if (center.subscriptionEndsAt) {
+        const sDaysLeft = Math.ceil((new Date(center.subscriptionEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
+        localStorage.setItem('subscriptionDaysLeft', Math.max(0, sDaysLeft));
+    }
+};
+
+const persistClientAuth = (data) => {
+    const token = data.data?.token || data.token;
+    if (token) localStorage.setItem('token', token);
+    persistActor(data.data?.actor || data.actor);
+    persistCenterBasics(data);
+};
+
+const clearClientAuth = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('gymName');
+    localStorage.removeItem('billingStatus');
+    localStorage.removeItem('trialDaysLeft');
+    localStorage.removeItem('subscriptionDaysLeft');
+    localStorage.removeItem('actor');
+};
+
 const toCents = (value) => {
     if (value === '' || value === null || value === undefined) return undefined;
     return Math.round(Number(value) * 100);
@@ -22,6 +73,7 @@ const handleResponse = async (response) => {
         let msg = '';
         const isLoginRequest =
             response.url?.includes('/auth/login') ||
+            response.url?.includes('/staff/auth/login') ||
             response.url?.includes('/platform-admin/auth/login');
 
         // If backend sent structured errors array
@@ -56,8 +108,7 @@ const handleResponse = async (response) => {
                 : 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى.';
 
             alert(logoutMessage);
-            localStorage.removeItem('token');
-            localStorage.removeItem('gymName');
+            clearClientAuth();
             window.location.href = '/login';
             return; // Stop execution
         }
@@ -93,33 +144,19 @@ export const authAPI = {
             body: JSON.stringify({ email, password }),
         });
         const data = await handleResponse(response);
-        // Backend returns: { status, message, data: { token, center } }
-        const token = data.data?.token || data.token;
-        if (token) {
-            localStorage.setItem('token', token);
-        }
-        // Persist center billing info for the trial/subscription banner
-        const center = data.data?.center || data.center;
-        if (center) {
-            if (center.name) localStorage.setItem('gymName', center.name);
-            if (center.billingStatus) localStorage.setItem('billingStatus', center.billingStatus);
+        persistClientAuth(data);
+        return data;
+    },
 
-            // Trial info
-            if (center.trialDaysLeft !== undefined && center.trialDaysLeft !== null) {
-                localStorage.setItem('trialDaysLeft', center.trialDaysLeft);
-            } else if (center.trialEndsAt) {
-                const tDaysLeft = Math.ceil((new Date(center.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
-                localStorage.setItem('trialDaysLeft', Math.max(0, tDaysLeft));
-            }
-
-            // Subscription info
-            if (center.subscriptionDaysLeft !== undefined && center.subscriptionDaysLeft !== null) {
-                localStorage.setItem('subscriptionDaysLeft', center.subscriptionDaysLeft);
-            } else if (center.subscriptionEndsAt) {
-                const sDaysLeft = Math.ceil((new Date(center.subscriptionEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
-                localStorage.setItem('subscriptionDaysLeft', Math.max(0, sDaysLeft));
-            }
-        }
+    // POST /api/v1/staff/auth/login
+    staffLogin: async (email, password) => {
+        const response = await fetch(`${BASE_URL}/staff/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await handleResponse(response);
+        persistClientAuth(data);
         return data;
     },
 
@@ -812,6 +849,83 @@ export const debtsAPI = {
     getMemberSummary: async (memberId) => {
         const response = await fetch(`${BASE_URL}/debts/member/${memberId}/summary`, {
             headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    }
+};
+
+export const staffAPI = {
+    // GET /api/v1/staff/me
+    me: async () => {
+        const response = await fetch(`${BASE_URL}/staff/me`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // GET /api/v1/staff
+    getStaff: async (params = {}) => {
+        const query = new URLSearchParams();
+        if (params.page) query.append('page', params.page);
+        if (params.limit) query.append('limit', params.limit);
+        if (params.role) query.append('role', params.role);
+        if (params.status) query.append('status', params.status);
+        if (params.search) query.append('search', params.search);
+
+        const response = await fetch(`${BASE_URL}/staff${query.toString() ? `?${query.toString()}` : ''}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    // POST /api/v1/staff
+    createStaff: async (payload) => {
+        const response = await fetch(`${BASE_URL}/staff`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/staff/:id
+    updateStaff: async (id, payload) => {
+        const response = await fetch(`${BASE_URL}/staff/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload),
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/staff/:id/status
+    updateStaffStatus: async (id, status) => {
+        const response = await fetch(`${BASE_URL}/staff/${id}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({ status }),
+        });
+        return handleResponse(response);
+    },
+
+    // PATCH /api/v1/staff/:id/password
+    updateStaffPassword: async (id, password) => {
+        const response = await fetch(`${BASE_URL}/staff/${id}/password`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({ password }),
         });
         return handleResponse(response);
     }

@@ -14,9 +14,11 @@ import AccountingShift from './pages/AccountingShift';
 import AccountingLedger from './pages/AccountingLedger';
 import AccountingHistory from './pages/AccountingHistory';
 import AccountingDebts from './pages/AccountingDebts';
+import Staff from './pages/Staff';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SupportFooter from './components/SupportFooter';
+import { getActorRole } from './utils/auth';
 import './index.css';
 
 // Simple auth protection
@@ -24,6 +26,23 @@ const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+const RoleRoute = ({ children, allowedRoles = [] }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!allowedRoles.length) return children;
+
+  const actorRole = getActorRole();
+  // Backward compatibility for old sessions with no stored actor yet.
+  if (!actorRole) return children;
+
+  if (!allowedRoles.includes(actorRole)) {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
@@ -150,6 +169,14 @@ const AppContent = () => {
             <PrivateRoute>
               <AccountingDebts />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff"
+          element={
+            <RoleRoute allowedRoles={['owner']}>
+              <Staff />
+            </RoleRoute>
           }
         />
 

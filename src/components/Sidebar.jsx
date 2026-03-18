@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, Package, LogOut, Dumbbell, ScanBarcode, ClipboardList, Wallet, ChevronDown, ChevronRight, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Package, LogOut, Dumbbell, ScanBarcode, ClipboardList, Wallet, ChevronDown, ChevronRight, Sun, Moon, UserCog } from 'lucide-react';
+import { clearClientSessionStorage, getStoredActor } from '../utils/auth';
 
 const Sidebar = () => {
     const gymName = localStorage.getItem('gymName') || 'NEON GYM';
+    const actor = getStoredActor();
+    const actorRole = actor?.role;
+    // Fallback for legacy sessions created before actor storage was introduced.
+    const isOwner = actorRole === 'owner' || !actorRole;
     const location = useLocation();
 
     // Check if any accounting route is active
@@ -11,8 +16,7 @@ const Sidebar = () => {
     const [isAccountingOpen, setIsAccountingOpen] = useState(isAccountingActive);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('gymName');
+        clearClientSessionStorage();
         window.location.href = '/login';
     };
 
@@ -42,6 +46,7 @@ const Sidebar = () => {
         { path: '/members', icon: Users, label: 'Members' },
         { path: '/subscriptions', icon: CreditCard, label: 'Subscriptions' },
         { path: '/plans', icon: Package, label: 'Plans' },
+        ...(isOwner ? [{ path: '/staff', icon: UserCog, label: 'Staff' }] : []),
     ];
 
     return (
