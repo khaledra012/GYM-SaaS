@@ -172,6 +172,7 @@ const WhatsApp = () => {
     const [moduleInfo, setModuleInfo] = useState(null);
     const [sessionInfo, setSessionInfo] = useState(null);
     const [isLoadingSession, setIsLoadingSession] = useState(true);
+    const [isAwaitingPairing, setIsAwaitingPairing] = useState(false);
     const [activeAction, setActiveAction] = useState('');
     const [testForm, setTestForm] = useState({ phone: '', message: '' });
 
@@ -205,6 +206,11 @@ const WhatsApp = () => {
             const payload = extractSessionPayload(response);
             setModuleInfo(payload.module);
             setSessionInfo(payload.session);
+            setIsAwaitingPairing((prev) => {
+                if (payload.session?.status === 'connected') return false;
+                if (['connecting', 'qr_ready', 'degraded', 'paused'].includes(payload.session?.status)) return true;
+                return prev;
+            });
         } catch (error) {
             console.error('Failed to fetch WhatsApp session status:', error);
             if (!silent) {
@@ -302,14 +308,15 @@ const WhatsApp = () => {
     }, [activeTab, selectedCampaignId]);
 
     useEffect(() => {
-        const shouldPoll = ['connecting', 'qr_ready', 'degraded', 'paused'].includes(sessionInfo?.status)
+        const shouldPoll = isAwaitingPairing
+            || ['connecting', 'qr_ready', 'degraded', 'paused', 'disconnected'].includes(sessionInfo?.status)
             || moduleInfo?.status === 'paused';
         if (!shouldPoll) return undefined;
         const timer = window.setInterval(() => {
             fetchSessionStatus({ silent: true });
         }, 4000);
         return () => window.clearInterval(timer);
-    }, [sessionInfo?.status, moduleInfo?.status]);
+    }, [isAwaitingPairing, sessionInfo?.status, moduleInfo?.status]);
 
     useEffect(() => {
         if (activeTab !== 'campaigns') return undefined;
@@ -326,8 +333,14 @@ const WhatsApp = () => {
     const runSessionAction = async (actionKey, actionFn, successMessage) => {
         setActiveAction(actionKey);
         try {
+            if (actionKey === 'connect' || actionKey === 'resume') {
+                setIsAwaitingPairing(true);
+            }
             await actionFn();
             await fetchSessionStatus({ silent: true });
+            if (actionKey === 'disconnect') {
+                setIsAwaitingPairing(false);
+            }
             if (successMessage) alert(successMessage);
         } catch (error) {
             alert(error.message || 'Failed to update WhatsApp state.');
@@ -471,6 +484,8 @@ const WhatsApp = () => {
         setActiveTab('messages');
     };
 
+    const qrImageKey = sessionInfo?.lastQrAt || sessionInfo?.updatedAt || sessionInfo?.qrCodeDataUrl || 'qr-empty';
+
     return (
         <DashboardLayout>
             <div className="flex-between page-header mb-8" style={{ gap: '1rem', alignItems: 'flex-start' }}>
@@ -581,13 +596,13 @@ const WhatsApp = () => {
                             {sessionInfo?.status === 'qr_ready' && sessionInfo?.qrCodeDataUrl ? (
                                 <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
                                     <div style={{ background: '#fff', borderRadius: '18px', padding: '1rem', display: 'inline-flex' }}>
-                                        <img src={sessionInfo.qrCodeDataUrl} alt="WhatsApp QR" style={{ maxWidth: '100%', width: '260px', borderRadius: '12px' }} />
+                                        <img key={qrImageKey} src={sessionInfo.qrCodeDataUrl} alt="WhatsApp QR" style={{ maxWidth: '100%', width: '260px', borderRadius: '12px' }} />
                                     </div>
                                     <p style={{ color: 'var(--text-muted)', marginTop: '0.75rem' }}>Scan the QR code from WhatsApp to complete the connection.</p>
                                 </div>
                             ) : (
                                 <div className="empty-state" style={{ marginBottom: '1.5rem' }}>
-                                    <p>{sessionInfo?.status === 'connected' ? 'Session is connected. QR is hidden.' : 'No QR available right now.'}</p>
+                                    <p>{sessionInfo?.status === 'connected' ? 'Session is connected. QR is hidden.' : (isAwaitingPairing ? 'Waiting for a fresh QR from the server...' : 'No QR available right now.')}</p>
                                 </div>
                             )}
 

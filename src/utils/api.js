@@ -1,4 +1,4 @@
-const BASE_URL = 'https://gym-saas-backend-production.up.railway.app/api/v1';
+const BASE_URL = 'https://satisfied-stillness-devolp.up.railway.app/api/v1';
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
