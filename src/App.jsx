@@ -15,6 +15,7 @@ import AccountingLedger from './pages/AccountingLedger';
 import AccountingHistory from './pages/AccountingHistory';
 import AccountingDebts from './pages/AccountingDebts';
 import Staff from './pages/Staff';
+import WhatsApp from './pages/WhatsApp';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SupportFooter from './components/SupportFooter';
@@ -176,6 +177,14 @@ const AppContent = () => {
           element={
             <RoleRoute allowedRoles={['owner']}>
               <Staff />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/whatsapp"
+          element={
+            <RoleRoute allowedRoles={['owner', 'manager']}>
+              <WhatsApp />
             </RoleRoute>
           }
         />

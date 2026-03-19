@@ -172,12 +172,43 @@ body.light-mode .animated-bg {
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   z-index: 100;
   transition: all 0.3s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+}
+
+.sidebar:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.48);
 }
 
 body.light-mode .sidebar {
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  scrollbar-color: rgba(71, 85, 105, 0.4) transparent;
+}
+
+body.light-mode .sidebar::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.28);
+}
+
+body.light-mode .sidebar:hover::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.42);
 }
 
 .sidebar-header {
@@ -1073,6 +1104,8 @@ body.light-mode .sidebar {
     width: 100%;
     justify-content: space-around;
     gap: 0;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .nav-link {

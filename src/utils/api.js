@@ -854,6 +854,199 @@ export const debtsAPI = {
     }
 };
 
+export const whatsappAPI = {
+    connectSession: async () => {
+        const response = await fetch(`${BASE_URL}/whatsapp/session/connect`, {
+            method: 'POST',
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    getSessionStatus: async () => {
+        const response = await fetch(`${BASE_URL}/whatsapp/session/status`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    disconnectSession: async () => {
+        const response = await fetch(`${BASE_URL}/whatsapp/session/disconnect`, {
+            method: 'POST',
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    resumeModule: async () => {
+        const response = await fetch(`${BASE_URL}/whatsapp/session/resume`, {
+            method: 'POST',
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    sendTestMessage: async ({ phone, message }) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/messages/test`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({
+                phone,
+                ...(message ? { message } : {})
+            })
+        });
+        return handleResponse(response);
+    },
+
+    getMessages: async (params = {}) => {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                query.append(key, value);
+            }
+        });
+
+        const response = await fetch(`${BASE_URL}/whatsapp/messages${query.toString() ? `?${query.toString()}` : ''}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    getTemplates: async () => {
+        const response = await fetch(`${BASE_URL}/whatsapp/templates`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    createTemplate: async (payload) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/templates`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload)
+        });
+        return handleResponse(response);
+    },
+
+    previewCampaign: async (payload) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns/preview`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload)
+        });
+        return handleResponse(response);
+    },
+
+    createCampaign: async (payload) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload)
+        });
+        return handleResponse(response);
+    },
+
+    getCampaigns: async (params = {}) => {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                query.append(key, value);
+            }
+        });
+
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns${query.toString() ? `?${query.toString()}` : ''}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    getCampaign: async (id) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns/${id}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    pauseCampaign: async (id) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns/${id}/pause`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({})
+        });
+        return handleResponse(response);
+    },
+
+    resumeCampaign: async (id) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns/${id}/resume`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({})
+        });
+        return handleResponse(response);
+    },
+
+    cancelCampaign: async (id) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/campaigns/${id}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify({})
+        });
+        return handleResponse(response);
+    },
+
+    updateTemplate: async (id, payload) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/templates/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload)
+        });
+        return handleResponse(response);
+    },
+
+    getOptIn: async (memberId) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/opt-ins/${memberId}`, {
+            headers: { ...getAuthHeader() }
+        });
+        return handleResponse(response);
+    },
+
+    updateOptIn: async (memberId, payload) => {
+        const response = await fetch(`${BASE_URL}/whatsapp/opt-ins/${memberId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            },
+            body: JSON.stringify(payload)
+        });
+        return handleResponse(response);
+    }
+};
+
 export const staffAPI = {
     // GET /api/v1/staff/me
     me: async () => {

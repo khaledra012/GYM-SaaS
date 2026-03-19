@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, Package, LogOut, Dumbbell, ScanBarcode, ClipboardList, Wallet, ChevronDown, ChevronRight, Sun, Moon, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Package, LogOut, Dumbbell, ScanBarcode, ClipboardList, Wallet, ChevronDown, ChevronRight, Sun, Moon, UserCog, MessageCircle } from 'lucide-react';
 import { clearClientSessionStorage, getStoredActor } from '../utils/auth';
 
 const Sidebar = () => {
@@ -9,6 +9,7 @@ const Sidebar = () => {
     const actorRole = actor?.role;
     // Fallback for legacy sessions created before actor storage was introduced.
     const isOwner = actorRole === 'owner' || !actorRole;
+    const canUseWhatsAppModule = actorRole === 'owner' || actorRole === 'manager' || !actorRole;
     const location = useLocation();
 
     // Check if any accounting route is active
@@ -46,6 +47,7 @@ const Sidebar = () => {
         { path: '/members', icon: Users, label: 'Members' },
         { path: '/subscriptions', icon: CreditCard, label: 'Subscriptions' },
         { path: '/plans', icon: Package, label: 'Plans' },
+        ...(canUseWhatsAppModule ? [{ path: '/whatsapp', icon: MessageCircle, label: 'WhatsApp' }] : []),
         ...(isOwner ? [{ path: '/staff', icon: UserCog, label: 'Staff' }] : []),
     ];
 

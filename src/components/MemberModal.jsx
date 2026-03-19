@@ -3,7 +3,7 @@ import { Eye, Printer, X } from 'lucide-react';
 import Input from './Input';
 import Button from './Button';
 import DebtDetailsModal from './DebtDetailsModal';
-import { debtsAPI, membersAPI } from '../utils/api';
+import { debtsAPI, membersAPI, whatsappAPI } from '../utils/api';
 
 const parseMoney = (value) =>
     Number(value || 0).toLocaleString('en-EG', {
@@ -25,6 +25,8 @@ const extractMemberFinance = (memberDetails, debtSummary) => ({
     outstandingDebtCount: debtSummary?.outstandingDebtsCount || memberDetails?.outstandingDebtCount || 0
 });
 
+const extractOptInState = (response) => response?.data || response || null;
+
 const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -37,6 +39,9 @@ const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
     const [financialSummary, setFinancialSummary] = useState(null);
     const [memberDebts, setMemberDebts] = useState([]);
     const [loadingFinance, setLoadingFinance] = useState(false);
+    const [whatsAppOptIn, setWhatsAppOptIn] = useState(null);
+    const [loadingWhatsAppOptIn, setLoadingWhatsAppOptIn] = useState(false);
+    const [savingWhatsAppOptIn, setSavingWhatsAppOptIn] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState(null);
     const [isDebtDetailsOpen, setIsDebtDetailsOpen] = useState(false);
 
@@ -55,6 +60,7 @@ const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
             if (member.id) {
                 loadBarcode(member.id);
                 loadFinancialData(member.id);
+                loadWhatsAppOptIn(member.id);
             }
         } else {
             setFormData({
@@ -67,6 +73,7 @@ const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
             setBarcodeUrl(null);
             setFinancialSummary(null);
             setMemberDebts([]);
+            setWhatsAppOptIn(null);
         }
 
         return () => {
@@ -103,6 +110,36 @@ const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
             setMemberDebts([]);
         } finally {
             setLoadingFinance(false);
+        }
+    };
+
+    const loadWhatsAppOptIn = async (memberId) => {
+        setLoadingWhatsAppOptIn(true);
+        try {
+            const response = await whatsappAPI.getOptIn(memberId);
+            setWhatsAppOptIn(extractOptInState(response));
+        } catch (error) {
+            console.error('Failed to load member WhatsApp opt-in:', error);
+            setWhatsAppOptIn(null);
+        } finally {
+            setLoadingWhatsAppOptIn(false);
+        }
+    };
+
+    const handleToggleWhatsAppOptIn = async () => {
+        if (!member?.id) return;
+
+        setSavingWhatsAppOptIn(true);
+        try {
+            const response = await whatsappAPI.updateOptIn(member.id, {
+                isOptedIn: !Boolean(whatsAppOptIn?.isOptedIn),
+                source: 'members_form'
+            });
+            setWhatsAppOptIn(extractOptInState(response));
+        } catch (error) {
+            alert(error.message || 'Failed to update WhatsApp opt-in.');
+        } finally {
+            setSavingWhatsAppOptIn(false);
         }
     };
 
@@ -251,6 +288,58 @@ const MemberModal = ({ isOpen, onClose, onSubmit, member, isLoading }) => {
                                                 <div style={{ fontSize: '1.15rem', fontWeight: '700' }}>{financialSummary?.outstandingDebtCount || 0}</div>
                                             </div>
                                         </div>
+                                    )}
+                                </div>
+                            ) : null}
+
+                            {member ? (
+                                <div className="detail-card">
+                                    <div className="flex-between" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h3 className="detail-section-title">WhatsApp Preference</h3>
+                                            <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                                This preference is stored on the member profile. Automatic WhatsApp messages are no longer blocked by opt-in.
+                                            </p>
+                                        </div>
+                                        <span
+                                            className="status-badge"
+                                            style={whatsAppOptIn?.isOptedIn
+                                                ? { background: 'var(--accent-neon-light)', color: 'var(--accent-neon)' }
+                                                : { background: 'rgba(239, 68, 68, 0.14)', color: '#fca5a5' }}
+                                        >
+                                            {whatsAppOptIn?.isOptedIn ? 'Opted In' : 'Opted Out'}
+                                        </span>
+                                    </div>
+
+                                    {loadingWhatsAppOptIn ? (
+                                        <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>Loading WhatsApp consent...</p>
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                                                <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--card-border)' }}>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.35rem' }}>Source</div>
+                                                    <div style={{ fontSize: '1rem', fontWeight: '700' }}>{whatsAppOptIn?.source || '---'}</div>
+                                                </div>
+                                                <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--card-border)' }}>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.35rem' }}>Updated At</div>
+                                                    <div style={{ fontSize: '1rem', fontWeight: '700' }}>
+                                                        {whatsAppOptIn?.updatedAt ? new Date(whatsAppOptIn.updatedAt).toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '---'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                <Button type="button" onClick={handleToggleWhatsAppOptIn} disabled={savingWhatsAppOptIn || !member.phone} style={{ width: 'auto' }}>
+                                                    {savingWhatsAppOptIn ? 'Saving...' : (whatsAppOptIn?.isOptedIn ? 'Disable Opt-In' : 'Enable Opt-In')}
+                                                </Button>
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                                    Automatic messages may still be queued for this member if session and module rules allow it.
+                                                </span>
+                                                {!member.phone ? (
+                                                    <span style={{ color: '#fbbf24', fontSize: '0.9rem' }}>Member needs a phone number first.</span>
+                                                ) : null}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             ) : null}
